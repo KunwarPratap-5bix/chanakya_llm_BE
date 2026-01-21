@@ -1,0 +1,719 @@
+openapi: '3.0.2'
+info:
+    version: 1.0.0
+    title: LOCAL API
+servers:
+    - url: /api
+tags:
+    - name: Authentication
+      description: Operations related to user authentication
+    - name: Conversation
+      description: Operations related to conversation and messaging
+    - name: Common
+      description: Operations related to common api's  
+
+paths:
+    /auth/register:
+        post:
+            summary: Register user
+            operationId: registerUser
+            tags:
+                - Authentication
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        examples:
+                            EMAIL:
+                                value:
+                                    name: "John Doe"
+                                    email: "johndoe@yopmail.com"
+                                    password: "Qwerty@123"
+                            PHONE:
+                                value:
+                                    name: "John Doe"
+                                    countryCode: "+91"
+                                    phone: "1234567890"
+                                    password: "Qwerty@123"
+                        schema:
+                            type: object
+                            required:
+                                - name
+                                - password
+                            properties:
+                                name:
+                                    type: string
+                                    description: Full name of the user
+                                email:
+                                    type: string
+                                    format: email
+                                    description: Email address of the user
+                                countryCode:
+                                    type: string
+                                    description: Country code of the user
+                                phone:
+                                    type: string
+                                    description: Mobile number of the user
+                                password:
+                                    type: string
+                                    description: password for user account 
+            responses:
+                200:
+                    description: User and auth token
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            isMFAEnabled:
+                                                type: boolean
+                                            token:
+                                                type: string
+                                            user:
+                                                $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/request-otp:
+        post:
+            summary: Request otp
+            operationId: requestOtp
+            tags:
+                - Authentication
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        examples:
+                            EMAIL:
+                                value:
+                                    verifyType: 'EMAIL'
+                                    otpType: 'FORGOT_PASSWORD'
+                                    email: 'johndoe@yopmail.com'
+                            PHONE:
+                                value:
+                                    verifyType: 'PHONE'
+                                    otpType: 'FORGOT_PASSWORD'
+                                    countryCode: '+91'
+                                    phone: '1234567890'
+                            BOTH:
+                                value:
+                                    verifyType: 'BOTH'
+                                    otpType: 'FORGOT_PASSWORD'
+                                    email: 'johndoe@yopmail.com'
+                                    countryCode: '+91'
+                                    phone: '1234567890'
+                        schema:
+                            type: object
+                            required:
+                                - verifyType
+                                - otpType
+                            properties:
+                                verifyType:
+                                    type: string
+                                    description: Available values are EMAIL, PHONE, BOTH
+                                otpType:
+                                    type: string
+                                    description: Available values are FORGOT_PASSWORD, CHANGE_PHONE, CHANGE_EMAIL, LOGIN
+                                email:
+                                    type: string
+                                    description: Email address of User
+                                countryCode:
+                                    type: string
+                                    description: Country code of user
+                                phone:
+                                    type: string
+                                    description: Phone number of user
+            responses:
+                200:
+                    description: Message indicating OTP has been sent successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/verify-otp:
+        post:
+            summary: Verify otp
+            operationId: verifyOtp
+            tags:
+                - Authentication
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        examples:
+                            EMAIL:
+                                value:
+                                    verifyType: 'EMAIL'
+                                    otpType: 'FORGOT_PASSWORD'
+                                    email: 'johndoe@yopmail.com'
+                                    emailToken: '123456'
+                            PHONE:
+                                value:
+                                    verifyType: 'PHONE'
+                                    otpType: 'FORGOT_PASSWORD'
+                                    countryCode: '+91'
+                                    phone: '1234567890'
+                                    phoneToken: '123456'
+                            BOTH:
+                                value:
+                                    verifyType: 'BOTH'
+                                    otpType: 'FORGOT_PASSWORD'
+                                    email: 'johndoe@yopmail.com'
+                                    countryCode: '+91'
+                                    phone: '1234567890'
+                                    emailToken: '123456'
+                                    phoneToken: '123456'
+                        schema:
+                            type: object
+                            required:
+                                - verifyType
+                                - otpType
+                            properties:
+                                verifyType:
+                                    type: string
+                                    description: Available values are EMAIL, PHONE, BOTH
+                                otpType:
+                                    type: string
+                                    description: Available values are FORGOT_PASSWORD, CHANGE_PHONE, CHANGE_EMAIL
+                                email:
+                                    type: string
+                                    description: email address of user
+                                countryCode:
+                                    type: string
+                                    description: Country code of user
+                                phone:
+                                    type: string
+                                    description: Phone number of user
+                                emailToken:
+                                    type: string
+                                    description: OTP received on email address of user
+                                phoneToken:
+                                    type: string
+                                    description: OTP received on phone number of user
+            responses:
+                200:
+                    description: Message indicating OTP has been verified successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/log-in:
+        post:
+            summary: Login
+            operationId: login
+            tags:
+                - Authentication
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        examples:
+                            EMAIL:
+                                value:
+                                    email: "johndoe@yopmail.com"
+                                    password: "Qwerty@123"
+                            PHONE:
+                                value:
+                                    countryCode: "+91"
+                                    phone: "1234567890"
+                                    password: "Qwerty@123"
+                        schema:
+                            type: object
+                            required:
+                                - password
+                            properties:
+                                email:
+                                    type: string
+                                    description: Email address of user
+                                countryCode:
+                                    type: string
+                                    description: Country code of user
+                                phone:
+                                    type: string
+                                    description: Phone number of user
+                                password:
+                                    type: string
+                                    description: Password of user
+            responses:
+                200:
+                    description: Message indicating Login successful
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            token:
+                                                type: string
+                                            user:
+                                                $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/log-out:
+        get:
+            summary: Logout user
+            operationId: userLogOut
+            tags:
+                - Authentication
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            responses:
+                200:
+                    description: Success message indicating user has been logged out successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/delete-account:
+        delete:
+            summary: Delete user account
+            operationId: deleteMyAccount
+            tags:
+                - Authentication
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            responses:
+                200:
+                    description: Account deleted successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /conversation/start:
+        post:
+            summary: Start a new conversation
+            operationId: startConversation
+            tags:
+                - Conversation
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            title: "My Tech Question"
+                            firstMessage: "Hello, can you help me with a coding problem?"
+                        schema:
+                            type: object
+                            properties:
+                                title:
+                                    type: string
+                                    description: Optional title for the conversation
+                                firstMessage:
+                                    type: string
+                                    description: Optional first message to start the conversation
+            responses:
+                200:
+                    description: Conversation started successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /conversation/list:
+        get:
+            summary: Get all conversations of the logged-in user
+            operationId: getConversations
+            tags:
+                - Conversation
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            responses:
+                200:
+                    description: Conversations fetched successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /conversation/{id}/messages:
+        get:
+            summary: Get all messages of a specific conversation
+            operationId: getMessages
+            tags:
+                - Conversation
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: Messages fetched successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /conversation/{id}/message:
+        post:
+            summary: Send a message to an existing conversation
+            operationId: sendMessage
+            tags:
+                - Conversation
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            message: "Specify that I want to use Node.js"
+                        schema:
+                            type: object
+                            required:
+                                - message
+                            properties:
+                                message:
+                                    type: string
+                                    description: The message to send to the conversation
+            responses:
+                200:
+                    description: Message sent successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /conversation/{id}:
+        delete:
+            summary: Delete a conversation
+            operationId: deleteConversation
+            tags:
+                - Conversation
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: Conversation deleted successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /conversation/{id}/rename:
+        patch:
+            summary: Rename a conversation
+            operationId: renameConversation
+            tags:
+                - Conversation
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            title: "Updated Conversation Title"
+                        schema:
+                            type: object
+                            required:
+                                - title
+                            properties:
+                                title:
+                                    type: string
+                                    description: New title for the conversation
+            responses:
+                200:
+                    description: Conversation renamed successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /common/countries:
+        get:
+            summary: Get all countries
+            operationId: getAllCountries
+            tags:
+                - Common
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'     
+            responses:
+                200:
+                    description: Message indicating group status updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /common/configurations:
+        get:
+            summary: Get configuration settings
+            operationId: getAllConfiguration
+            tags:
+                - Common
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            responses:
+                200:
+                    description: Message indicating that configuration data retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /notification:
+        get:
+            summary: Get paginated list of notifications and unseen count
+            operationId: getAndCountNotification
+            tags:
+                - Notification
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'  
+                - $ref: '#/components/parameters/queryPage'  
+                - $ref: '#/components/parameters/queryPerPage' 
+                - name: sort
+                  in: query
+                  description: Sort documents by field and order.  
+                  Example format: fieldName:1 for ascending or fieldName:-1 for descending.
+                  required: false
+                  schema:
+                    type: string
+                    example: "createdAt:-1"
+            responses:
+                200:
+                    description: Documents retrieved successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'         
+
+    /upload/upload-files:
+        post:
+            summary: Use this api to upload file to S3
+            operationId: uploadFiles
+            tags:
+                - Upload    
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            files:
+                                - location: "images"
+                                  extension: "png"
+                        schema:
+                            type: object
+                            required:
+                                - patient
+                                - notes
+                            properties:
+                                files:
+                                    type: array
+                                    description: List of file extension and location
+                                    items:
+                                        type: object
+                                        required:
+                                            - files
+                                        properties:
+                                            location:
+                                                type: string
+                                                minLength: 3
+                                                maxLength: 100
+                                                description: Location od the file where you want to upload
+                                            extension:
+                                                type: string
+                                                description: Extension of the file which you want to upload
+            responses:
+                200:
+                    description: Message indicating that signed url generated successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+            
+    /upload/delete-files:
+        post:
+            summary: Use this api to delete file to S3
+            operationId: deleteFiles
+            tags:
+                - Upload
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            locations: ["lab-report.pdf", "image.png"]
+                        schema:
+                            type: object
+                            required:
+                                - location
+                            properties:
+                                files:
+                                    type: array
+                                    description: List of file location
+                                    items:
+                                        type: object
+                                        required:
+                                            - location
+                                        properties:
+                                            location:
+                                                type: array
+                                                items:
+                                                    type: string
+                                                description: List of file location
+            responses:
+                200:
+                    description: Message indicating that files deleted successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'

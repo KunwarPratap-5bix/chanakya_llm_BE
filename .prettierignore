@@ -1,0 +1,14 @@
+node_modules/*
+build/*
+src/static/*
+.prettierrc
+package.json
+tsconfig.json
+webStorm.config.js
+README.md
+docker-compose.yml
+Dockerfile
+.gitlab-ci.yml
+.env.api
+.env.api.example
+src/docs/swagger.yaml

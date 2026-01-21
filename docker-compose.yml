@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  abha-api:
+    build: .
+    image: abha-api-image
+    container_name: abha-api
+    env_file: .env.api
+    networks:
+      - abha-api-network
+    ports:
+      - "7000:7000"
+    command: node build/src/index.js
+    volumes:
+      - .:/abha-api/
+      - /abha-api/node_modules
+    restart: unless-stopped
+
+networks:
+  abha-api-network:
+    driver: bridge

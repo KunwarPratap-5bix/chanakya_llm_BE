@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Details</title>
+    <style>
+        html {
+            zoom: 0.7;
+        }
+        body {
+            font-family: Arial, sans-serif;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Transaction Details</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Amount</th>
+                <th>Commission</th>
+                <th>Net Amount</th>
+                <th>Payment Method</th>
+                <th>Payment Type</th>
+                <th>Date</th>
+                <th>UTR Number</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% data.forEach(function(data) { %>
+            <tr>
+                <td><%= data.orderId %></td>
+                <td><%= data.customerDetail?.name || data.recipient?.name || '' %></td>
+                <td><%= data.customerDetail?.email || data.recipient?.email || '' %></td>
+                <td><%= data.amount %></td>
+                <td><%= data.commission %></td>
+                <td><%= data.netAmount %></td>
+                <td><%= data.paymentType %></td>
+                <td><%= data.createdAt %></td>
+                <td><%= data.utrNumber || 'N/A' %></td>
+                <td>
+                    <% if (data.paymentType === 'Pay In') { %>
+                        <%= data.payInStatus %>
+                    <% } else if (data.paymentType === 'Pay Out') { %>
+                        <%= data.payOutStatus %>
+                    <% } else { %>
+                        N/A
+                    <% } %>
+                </td>
+            </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</body>
+</html>

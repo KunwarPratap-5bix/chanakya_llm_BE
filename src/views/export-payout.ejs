@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pay-Out Details</title>
+    <style>
+        html {
+            zoom: 0.7;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pay-Out Details</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Time</th>
+                <th>Amount</th>
+                <th>Transaction Details</th>
+                <th>Balance</th>
+                <th>Beneficiary</th>
+                <th>IFSC</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% data.forEach(function(data) { %>
+            <tr>
+                <td><%= data.createdAt%></td>
+                <td><%= data.amount%></td>
+                <td><%= data.customerDetail?.name%></td>
+                <td><%= data.customerDetail?.email%></td>
+                <td><%= data.amount%></td>
+                <td><%= data.recipient?.ifscCode%></td>
+                <td><%= data.paymentStatus%></td>
+                <td><%= data.action%></td>
+            </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</body>
+</html>

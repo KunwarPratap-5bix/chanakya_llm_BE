@@ -1,0 +1,142 @@
+{
+  "name": "Chanakya_LLM-api",
+  "version": "1.0.0",
+  "description": "Chanakya_LLM API",
+  "private": true,
+  "repository": "",
+  "engines": {
+    "node": ">=20.18.0",
+    "npm": ">=10.8.2"
+  },
+  "scripts": {
+    "lint": "eslint --fix .",
+    "format": "prettier --write .",
+    "lint-staged": "lint-staged",
+    "prebuild": "echo \"❌ removing older build. ❌\" && npx rimraf build",
+    "build": "echo \"💪 creating build. 💪\" && npx tsc && npx copy-files-from-to",
+    "postbuild": "npx tsc-alias && echo \"🔥 build successful. 🔥\"",
+    "postinstall-prod": "echo \"💀 skipping husky installation for production environment. 💀\"",
+    "postinstall-dev": "husky",
+    "postinstall": "if-env NODE_ENV=production && npm run postinstall-prod || npm run postinstall-dev",
+    "start": "npx path-exists build && echo \"😊 build already exists. 😊\" || npm run build && node build/src/index.js",
+    "watch": "nodemon src/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/s3-request-presigner": "^3.750.0",
+    "@sendgrid/mail": "^8.1.4",
+    "@simonsmith/ejs-mate": "^4.1.0",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "agenda": "^5.0.0",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "connect-mongo": "^5.1.0",
+    "crypto-js": "^4.2.0",
+    "custom-env": "^2.0.6",
+    "ejs": "^3.1.10",
+    "email-templates": "^13.0.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.1",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.5.0",
+    "if-env": "^1.0.4",
+    "ioredis": "^5.8.2",
+    "joi": "^17.13.3",
+    "json-2-csv": "^5.5.8",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.5.47",
+    "mongoose": "^8.9.3",
+    "morgan": "^1.10.0",
+    "nodemailer": "^7.0.12",
+    "openai": "^6.8.1",
+    "pdf-parse": "^2.4.5",
+    "puppeteer": "^24.8.0",
+    "qrcode": "^1.5.4",
+    "redis": "^5.9.0",
+    "socket.io": "^4.8.1",
+    "swagger-ui-express": "^5.0.1",
+    "tesseract.js": "^6.0.1",
+    "twilio": "^5.4.3",
+    "winston-daily-rotate-file": "^5.0.0",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.7.5",
+    "@types/crypto-js": "^4.2.2",
+    "@types/ejs": "^3.1.5",
+    "@types/email-templates": "^10.0.4",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/lodash": "^4.17.15",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.7.5",
+    "@types/nodemailer": "^6.4.17",
+    "@types/qrcode": "^1.5.6",
+    "@types/swagger-ui-express": "^4.1.7",
+    "@types/yamljs": "^0.2.34",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "copy-files-from-to": "^3.11.0",
+    "eslint": "^9.21.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "nodemon": "^3.1.7",
+    "path-exists-cli": "^2.0.0",
+    "prettier": "^3.5.2",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.10",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.1"
+  },
+  "nodemonConfig": {
+    "verbose": true,
+    "watch": [
+      "./src",
+      "./lib"
+    ],
+    "ext": "ts,ejs",
+    "ignore": [
+      "*.test.ts",
+      "*.spec.ts",
+      "*.yaml"
+    ],
+    "delay": 1500,
+    "execMap": {
+      "ts": "ts-node"
+    }
+  },
+  "copyFiles": [
+    {
+      "from": "src/views/**/*",
+      "to": "build/src/views/"
+    },
+    {
+      "from": "src/static/**/*",
+      "to": "build/src/static/"
+    },
+    {
+      "from": "src/docs/**/*",
+      "to": "build/src/docs/"
+    },
+    {
+      "from": "lib/mailer/templates/*/**",
+      "to": "build/lib/mailer/templates/"
+    }
+  ],
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --fix .",
+      "prettier --write .",
+      "git add ."
+    ]
+  }
+}

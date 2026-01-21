@@ -1,0 +1,160 @@
+securitySchemes:
+    ApiKeyAuth:
+        type: apiKey
+        in: header
+        name: Authorization
+parameters:
+    headerLanguage:
+        name: Accept-Language
+        in: header
+        required: true
+        schema:
+            type: string
+            default: en
+            enum:
+                - en
+                - ar
+    headerPlatform:
+        name: x-platform
+        in: header
+        required: true
+        schema:
+            type: string
+            default: web
+            enum:
+                - ios
+                - android
+                - web
+    headerVersion:
+        name: x-version
+        in: header
+        required: true
+        schema:
+            type: string
+            default: 1.0.0
+            pattern: '^[\d]+\.[\d]+\.[\d]+$'
+    headerTimeZone:
+        name: x-time-zone
+        in: header
+        required: true
+        schema:
+            type: number
+            default: 330
+    headerOsType:
+        name: x-os-type
+        in: header
+        required: true
+        schema:
+            type: string
+            default: windows
+            enum:
+                - windows
+                - window
+                - macOS
+                - linux
+                - android
+                - iOS
+                - chromeOS
+                - unix
+                - freeBSD
+                - openBSD
+                - netBSD
+                - solaris
+                - aix
+                - hpux
+                - other
+    headerInternalKey:
+        name: x-internal-key
+        in: header
+        required: true
+        schema:
+            type: string
+    queryPage:
+        name: page
+        in: query
+        description: page number
+        allowEmptyValue: false
+        required: true
+        schema:
+            type: integer
+    queryPerPage:
+        name: perPage
+        in: query
+        description: number of records per page
+        allowEmptyValue: false
+        required: true
+        schema:
+            type: integer
+responses:
+    BadRequestError:
+        description: Request fails validation or doesn't meet all conditions for request
+        content:
+            application/json:
+                schema:
+                    example:
+                        success: false
+                        message: 'Validation failed'
+                        data: null
+                    allOf:
+                        - $ref: '#/components/schemas/ApiResponse'
+                    properties:
+                        data:
+                            type: object
+                            nullable: true
+    NotFoundError:
+        description: Requested resource was not found
+    UnauthorizedError:
+        description: Access token is missing or invalid
+schemas:
+    ApiResponse:
+        required:
+            - success
+        properties:
+            success:
+                type: boolean
+            message:
+                type: string
+            data: {}
+    User:
+        type: object
+        properties:
+            name:
+                type: string
+                description: First name of user
+                example: 'John Doe'
+            email:
+                type: string
+                format: email
+                description: Email address of user
+                example: 'johndoe@yopmail.com'
+            countryCode:
+                type: string
+                description: Country code name of user
+                example: '+91'
+            phone:
+                type: string
+                description: Phone number of user
+                example: '1234567890'
+            formattedPhone:
+                type: string
+                description: Formatted phone number of user
+                example: '+91-1234567890'
+            password:
+                type: string
+                description: Password of user
+                example: 'User@123'
+            status:
+                type: string
+                enum:
+                    - Active
+                    - Inactive
+                example: 'Active'
+                description: Status of user
+            avatar:
+                type: string
+                description: Avatar of user
+                example: 'avatar'
+            password:
+                type: string
+                description: Password of the user
+                example: Qwerty@123

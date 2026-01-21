@@ -1,0 +1,74 @@
+declare global {
+    namespace NodeJS {
+        interface ProcessEnv {
+            PORT: string;
+            SITE_TITLE: string;
+            SITE_URL: string;
+            LOGO_PATH: string;
+            NODE_ENV: 'development' | 'production';
+            SERVER_MODE: 'http' | 'https';
+            SERVER_NAME: string;
+            SSL_KEY_PATH: string;
+            SSL_CERT_PATH: string;
+            SSL_CA_PATH: string;
+            MONGO_URI: string;
+            AWS_S3_ACCESS_KEY_ID: string;
+            AWS_S3_SECRET_ACCESS_KEY: string;
+            AWS_S3_REGION: string;
+            AWS_S3_BUCKET: string;
+            AWS_S3_BASE: string;
+            AWS_S3_SECURE: 'true' | 'false';
+            REMOVE_S3_CREDENTIALS: 'true' | 'false';
+            LOG_LEVEL: 'error' | 'warn' | 'info' | 'verbose' | 'debug' | 'silly';
+            MONGOOSE_DEBUG: 'true' | 'false';
+            LOG_REQUESTS: 'true' | 'false';
+            EXPOSE_SWAGGER: 'true' | 'false';
+            TF_CPP_MIN_LOG_LEVEL: string;
+            MAIL_SERVICE: 'sendgrid' | 'smtp';
+            FROM_MAIL: string;
+            SENDGRID_API_KEY: string;
+            SMTP_HOST: string;
+            SMTP_PORT: string;
+            SMTP_SECURE: 'true' | 'false';
+            TLS_CHECK: 'true' | 'false';
+            SMTP_SERVICE: string;
+            SMTP_USERNAME: string;
+            SMTP_PASSWORD: string;
+            SMS_SERVICE: 'twilio' | 'MSG91';
+            FROM_MOBILE: string;
+            TWILIO_SID: string;
+            TWILIO_AUTH_TOKEN: string;
+            MSG91_AUTH_TOKEN: string;
+            BCRYPT_ITERATIONS: string;
+            JWT_SECRET: string;
+            SECRET_ENCRYPTION_KEY: string;
+            VALIDATE_ACCESSING_DOMAIN: 'true' | 'false';
+            IS_ANY_OTHER_DOMAINS_ALLOWED: 'true' | 'false';
+            VALIDATE_SESSION: 'true' | 'false';
+            VALIDATE_PERMISSION: 'true' | 'false';
+            SESSION_SECRET: string;
+            SESSION_VALIDITY_DAYS: string;
+            ALLOWED_FAILED_LOGIN_ATTEMPTS: string;
+            PREVENT_LOGIN_ON_FAILED_ATTEMPTS_TILL: string;
+            FACE_MATCH_SIMILARITY_PERCENTAGE: string;
+            GET_REQUEST_RATE_WINDOW_MINUTES: string;
+            GET_REQUEST_RATE_LIMIT: string;
+            POST_REQUEST_RATE_WINDOW_MINUTES: string;
+            POST_REQUEST_RATE_LIMIT: string;
+            PUT_REQUEST_RATE_WINDOW_MINUTES: string;
+            PUT_REQUEST_RATE_LIMIT: string;
+            PATCH_REQUEST_RATE_WINDOW_MINUTES: string;
+            PATCH_REQUEST_RATE_LIMIT: string;
+            DELETE_REQUEST_RATE_WINDOW_MINUTES: string;
+            DELETE_REQUEST_RATE_LIMIT: string;
+            OTP_VALIDITY_MINUTES: string;
+            REDIS_URL: string;
+            REDIS_HOST: string;
+            REDIS_PORT: string;
+            REDIS_PASSWORD: string;
+            REDIS_TLS: string;
+            OPENAI_API_KEY: string;
+        }
+    }
+}
+export {};
