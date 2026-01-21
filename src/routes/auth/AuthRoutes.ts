@@ -30,12 +30,7 @@ router.get('/log-out', verifyToken(), AuthService.logout as RequestHandler);
 
 router.delete('/delete-account', verifyToken(), AuthService.deleteMyAccount as RequestHandler);
 
-router.get(
-    '/get-profile',
-    verifyToken(),
-    validate(AuthValidations.requiredId, 'query'),
-    AuthService.getProfile as RequestHandler
-);
+router.get('/get-profile', verifyToken(), AuthService.getProfile as RequestHandler);
 
 router.put(
     '/change-password',
@@ -45,4 +40,5 @@ router.put(
 );
 
 router.post('/reset-password', validate(AuthValidations.resetPassword), AuthService.resetPassword as RequestHandler);
+
 export { router };

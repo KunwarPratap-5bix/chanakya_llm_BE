@@ -118,9 +118,12 @@ schemas:
     User:
         type: object
         properties:
+            _id:
+                type: string
+                description: Unique identifier for the user
             name:
                 type: string
-                description: First name of user
+                description: Full name of user
                 example: 'John Doe'
             email:
                 type: string
@@ -129,7 +132,7 @@ schemas:
                 example: 'johndoe@yopmail.com'
             countryCode:
                 type: string
-                description: Country code name of user
+                description: Country code of user
                 example: '+91'
             phone:
                 type: string
@@ -139,22 +142,22 @@ schemas:
                 type: string
                 description: Formatted phone number of user
                 example: '+91-1234567890'
-            password:
-                type: string
-                description: Password of user
-                example: 'User@123'
             status:
                 type: string
                 enum:
+                    - Pending
                     - Active
                     - Inactive
+                    - Archived
                 example: 'Active'
                 description: Status of user
             avatar:
                 type: string
                 description: Avatar of user
                 example: 'avatar'
-            password:
-                type: string
-                description: Password of the user
-                example: Qwerty@123
+            isMobileVerified:
+                type: boolean
+                description: Whether the mobile number is verified
+            isEmailVerified:
+                type: boolean
+                description: Whether the email address is verified

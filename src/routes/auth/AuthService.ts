@@ -39,24 +39,19 @@ class AuthService {
 
         const authTokenIssuedAt = moment().unix();
 
-        // const user = await UserDao.createUser({
-        //     ...req.body,
-        //     authTokenIssuedAt,
-        //     status: Status.PENDING,
-        // });
+        const userData = {
+            ...req.body,
+            authTokenIssuedAt,
+            status: Status.PENDING,
+        };
 
-         const userData = {
-        ...req.body,
-        authTokenIssuedAt,
-        status: Status.PENDING,
-    };
-    // Only add the relevant key
-    if (email) {
-        userData.isEmailVerified = false;
-    } else if (phone) {
-        userData.isMobileVerified = false;
-    }
-    const user = await UserDao.createUser(userData);
+        // Only add the relevant key
+        if (email) {
+            userData.isEmailVerified = false;
+        } else if (phone) {
+            userData.isMobileVerified = false;
+        }
+        const user = await UserDao.createUser(userData);
 
         const userObj = getUserObj(user);
 
@@ -107,16 +102,6 @@ class AuthService {
                 );
             });
         }
-        // const phoneOtp: IOtp = {
-        //     user: user?._id as unknown as TypesObjectId,
-        //     otpType: OtpType.REGISTER,
-        //     countryCode,
-        //     phone,
-        //     verifyType: verifyType,
-        //     isVerified: false,
-        //     token: generateOtp(),
-        //     validTill: moment().add(otpValidityMinutes, 'minutes').unix(),
-        // };
 
         await OtpDao.updateOrCreatePhoneOtp({
             user: user._id,
@@ -124,44 +109,6 @@ class AuthService {
             phone,
             data: otpData,
         });
-        // const formatedNumber = countryCode + phone;
-
-        // sendSMS({
-        //     msg91Payload: {
-        //         template_id: '',
-        //         recipients: [{ mobiles: formatedNumber, var1: otpData.token }],
-        //     },
-        // }).catch(error => {
-        //     logger.error(
-        //         `AuthService:: requestOtp -> failed to send otpVerification SMS to ${countryCode}${phone}`,
-        //         error
-        //     );
-        // });
-
-        // if (otpData.verifyType === VerifyType.PHONE) {
-        // const formatedNumber = countryCode + phone;
-        // sendSMS({
-        //     msg91Payload: {
-        //         template_id: '',
-        //         recipients: [{ mobiles: formatedNumber, var1: otpData.token }],
-        //     },
-        // }).catch(error => {
-        //     logger.error(
-        //         `AuthService:: requestOtp -> failed to send otpVerification SMS to ${countryCode}${phone}`,
-        //         error
-        //     );
-        // });
-        // } else if (otpData.verifyType === VerifyType.EMAIL) {
-        // console.log('--------------------->EMAIL SENT<---------------------');
-        //  sendEmail({
-        //      to: email,
-        //      subject: 'Your OTP Code',
-        //      // include token and expiry // added code
-        //      html: `Your OTP is ${photpDataoneOtp.token}. It is valid for ${otpValidityMinutes} minutes.`,
-        //  }).catch(error => {
-        //      logger.error(`AuthService:: requestOtp -> failed to send otpVerification Email to ${email}`, error);
-        //  });
-        // }
 
         const session = await SessionDao.create({
             user: user._id,
@@ -379,10 +326,16 @@ class AuthService {
             });
         }
 
-        if (otpType === OtpType.REGISTER) {
+        if (otpType === OtpType.REGISTER && verifyType === VerifyType.PHONE) {
             await UserDao.updateUser({
                 id: user?._id as unknown as TypesObjectId,
-                data: { isMobileVerified: true },
+                data: { isMobileVerified: true, status: Status.ACTIVE },
+            });
+        }
+        if (otpType === OtpType.REGISTER && verifyType === VerifyType.EMAIL) {
+            await UserDao.updateUser({
+                id: user?._id as unknown as TypesObjectId,
+                data: { isEmailVerified: true, status: Status.ACTIVE },
             });
         }
 
@@ -433,7 +386,7 @@ class AuthService {
         await UserDao.updateUser({
             id,
             data: {
-                status: Status.ARCHIVED,
+                status: Status.INACTIVE,
                 authTokenIssuedAt: 0,
             },
         });
@@ -533,7 +486,7 @@ class AuthService {
     }
 
     private isRequestingEmailOTP = (otpType: OtpType, verifyType: VerifyType) => {
-        const PHONE_OTP = [OtpType.CHANGE_PHONE];
+        const PHONE_OTP = [OtpType.CHANGE_PHONE, OtpType.VERIFY_PHONE]; // ask agrani sir
         return !PHONE_OTP.includes(otpType) && (verifyType === VerifyType.EMAIL || verifyType === VerifyType.BOTH);
     };
 
@@ -548,18 +501,7 @@ class AuthService {
     }: ValidateEmailOtpRequest): Promise<IUserDoc | null> {
         let userData: IUserDoc | null = null;
 
-        if (otpType === OtpType.VERIFY_EMAIL) {
-            userData = await UserDao.getUserByEmail({ email });
-            if (!userData) {
-                throw new Error('USER_NOT_FOUND_WITH_EMAIL');
-            }
-
-            if (userData.status === Status.INACTIVE) {
-                throw new Error('YOUR_ACCOUNT_SUSPENDED');
-            }
-        }
-
-        if (otpType === OtpType.REGISTER) {
+        if (otpType === OtpType.VERIFY_EMAIL || otpType === OtpType.REGISTER || otpType === OtpType.FORGOT_PASSWORD) {
             userData = await UserDao.getUserByEmail({ email });
             if (!userData) {
                 throw new Error('USER_NOT_FOUND_WITH_EMAIL');
@@ -598,7 +540,7 @@ class AuthService {
         phoneToken,
     }: ValidatePhoneOtpRequest): Promise<IUserDoc | null> {
         let userData: IUserDoc | null = null;
-        if (otpType === OtpType.LOGIN || otpType === OtpType.REGISTER) {
+        if (otpType === OtpType.LOGIN || otpType === OtpType.REGISTER || otpType === OtpType.FORGOT_PASSWORD) {
             userData = await UserDao.getUserByPhone({ countryCode, phone });
 
             if (!userData) {

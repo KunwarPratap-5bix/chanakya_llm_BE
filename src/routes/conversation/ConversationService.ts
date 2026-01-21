@@ -2,19 +2,20 @@ import { Request, Response } from 'express';
 import { logger, getAiResponse } from '@utils';
 import ConversationDao from '../../dao/ConversationDao';
 import MessageDao from '../../dao/MessageDao';
-import { ChatRole } from '@enums';
+import { ChatRole, Status } from '@enums';
 import { CommonId } from '@schemas';
 
 class ConversationService {
     async startConversation(req: Request, res: Response) {
         try {
             const user = req.user._id;
+
             const { title, firstMessage } = req.body;
 
             const conversation = await ConversationDao.create({
                 user,
                 title: title || 'New Conversation',
-                isDeleted: false,
+                status: Status.ACTIVE,
             });
 
             if (firstMessage) {
@@ -46,10 +47,13 @@ class ConversationService {
     async sendMessage(req: Request, res: Response) {
         try {
             const { id } = req.params as unknown as CommonId;
+
             const { message } = req.body;
+
             const user = req.user._id;
 
             const conversation = await ConversationDao.getById(id);
+
             if (!conversation || conversation.user.toString() !== user.toString()) {
                 return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
             }
@@ -63,6 +67,7 @@ class ConversationService {
 
             // Get context (all previous messages)
             const messages = await MessageDao.getByConversationId(conversation._id);
+
             const context = messages.map(msg => ({
                 role: msg.role,
                 content: msg.content,
@@ -107,7 +112,9 @@ class ConversationService {
     async getConversations(req: Request, res: Response) {
         try {
             const user = req.user._id;
+
             const conversations = await ConversationDao.getByUserId(user);
+
             return res.success(conversations, req.__('CONVERSATIONS_FETCHED'));
         } catch (error: any) {
             logger.error('Error fetching conversations:', error);
@@ -118,7 +125,9 @@ class ConversationService {
     async deleteConversation(req: Request, res: Response) {
         try {
             const { id } = req.params as unknown as CommonId;
-            await ConversationDao.update({ id, data: { isDeleted: true } });
+
+            await ConversationDao.update({ id, data: { status: Status.ARCHIVED } });
+
             return res.success(null, req.__('CONVERSATION_DELETED'));
         } catch (error: any) {
             logger.error('Error deleting conversation:', error);
@@ -129,7 +138,7 @@ class ConversationService {
     async renameConversation(req: Request, res: Response) {
         try {
             const { id } = req.params as unknown as CommonId;
-            
+
             const { title } = req.body;
 
             if (!title) return res.badRequest(null, 'title is required');

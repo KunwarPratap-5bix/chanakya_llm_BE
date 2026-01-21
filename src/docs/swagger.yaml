@@ -1,7 +1,7 @@
 openapi: '3.0.2'
 info:
     version: 1.0.0
-    title: LOCAL API
+    title: CHANAKYA 1.0 API
 servers:
     - url: /api
 tags:
@@ -74,8 +74,6 @@ paths:
                                     data:
                                         type: object
                                         properties:
-                                            isMFAEnabled:
-                                                type: boolean
                                             token:
                                                 type: string
                                             user:
@@ -128,7 +126,7 @@ paths:
                                     description: Available values are EMAIL, PHONE, BOTH
                                 otpType:
                                     type: string
-                                    description: Available values are FORGOT_PASSWORD, CHANGE_PHONE, CHANGE_EMAIL, LOGIN
+                                    description: Available values are LOGIN, REGISTER, CHANGE_PHONE, CHANGE_EMAIL, VERIFY_EMAIL, FORGOT_PASSWORD
                                 email:
                                     type: string
                                     description: Email address of User
@@ -146,6 +144,12 @@ paths:
                             schema:
                                 allOf:
                                     - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            validTill:
+                                                type: integer
                 400:
                     $ref: '#/components/responses/BadRequestError'
 
@@ -198,7 +202,7 @@ paths:
                                     description: Available values are EMAIL, PHONE, BOTH
                                 otpType:
                                     type: string
-                                    description: Available values are FORGOT_PASSWORD, CHANGE_PHONE, CHANGE_EMAIL
+                                    description: Available values are LOGIN, REGISTER, CHANGE_PHONE, CHANGE_EMAIL, VERIFY_EMAIL, FORGOT_PASSWORD
                                 email:
                                     type: string
                                     description: email address of user
@@ -326,6 +330,129 @@ paths:
             responses:
                 200:
                     description: Account deleted successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/get-profile:
+        get:
+            summary: Get user profile
+            operationId: getProfile
+            tags:
+                - Authentication
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            responses:
+                200:
+                    description: Profile fetched successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/change-password:
+        put:
+            summary: Change password
+            operationId: changePassword
+            tags:
+                - Authentication
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            currentPassword: "Qwerty@123"
+                            newPassword: "NewPassword@123"
+                        schema:
+                            type: object
+                            required:
+                                - currentPassword
+                                - newPassword
+                            properties:
+                                currentPassword:
+                                    type: string
+                                newPassword:
+                                    type: string
+            responses:
+                200:
+                    description: Password changed successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            passwordMatched:
+                                                type: boolean
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
+    /auth/reset-password:
+        post:
+            summary: Reset password
+            operationId: resetPassword
+            tags:
+                - Authentication
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        examples:
+                            EMAIL:
+                                value:
+                                    email: "johndoe@yopmail.com"
+                                    password: "NewPassword@123"
+                            PHONE:
+                                value:
+                                    countryCode: "+91"
+                                    phone: "1234567890"
+                                    password: "NewPassword@123"
+                        schema:
+                            type: object
+                            required:
+                                - password
+                            properties:
+                                email:
+                                    type: string
+                                countryCode:
+                                    type: string
+                                phone:
+                                    type: string
+                                password:
+                                    type: string
+            responses:
+                200:
+                    description: Password reset successfully
                     content:
                         application/json:
                             schema:

@@ -1,4 +1,4 @@
-import { OtpType, UserAccountType, VerifyType } from '@enums';
+import { OtpType, VerifyType } from '@enums';
 import { commonValidations, joi } from '@utils';
 
 const requestOtp = joi.object().keys({
@@ -13,11 +13,11 @@ const requestOtp = joi.object().keys({
         .required()
         .when('verifyType', {
             is: VerifyType.EMAIL,
-            then: joi.valid(OtpType.CHANGE_EMAIL, OtpType.REGISTER, OtpType.VERIFY_EMAIL, OtpType.LOGIN),
+            then: joi.valid(OtpType.FORGOT_PASSWORD, OtpType.REGISTER, OtpType.VERIFY_EMAIL, OtpType.LOGIN),
         })
         .when('verifyType', {
             is: VerifyType.PHONE,
-            then: joi.valid(OtpType.CHANGE_PHONE, OtpType.REGISTER, OtpType.LOGIN),
+            then: joi.valid(OtpType.FORGOT_PASSWORD, OtpType.REGISTER, OtpType.VERIFY_PHONE, OtpType.LOGIN),
         }),
     email: joi.string().when('verifyType', {
         is: [VerifyType.EMAIL, VerifyType.BOTH],
@@ -57,17 +57,6 @@ const verifyOtp = requestOtp.keys({
     }),
 });
 
-// const verifyLoginOtp = joi.object().keys({
-//     countryCode: commonValidations.countryCode.optional(),
-//     phone: commonValidations.phone.optional(),
-//     password: commonValidations.password,
-//     email: commonValidations.email.optional(),
-// });
-
-const requiredId = joi.object().keys({
-    id: commonValidations.id,
-});
-
 const logIn = joi
     .object()
     .keys({
@@ -94,8 +83,6 @@ export default {
     register,
     requestOtp,
     verifyOtp,
-    // verifyLoginOtp,
-    requiredId,
     logIn,
     changePassword,
     resetPassword,

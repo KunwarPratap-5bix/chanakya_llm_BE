@@ -1,10 +1,11 @@
 import { Document, Model } from 'mongoose';
 import { TypesObjectId } from '../schemas';
+import { Status } from '@lib/enums';
 
 export interface IConversation {
     user: TypesObjectId;
     title?: string;
-    isDeleted: boolean;
+    status: Status;
 }
 
 export interface IConversationDoc extends IConversation, Document {
