@@ -116,10 +116,6 @@
   },
   "copyFiles": [
     {
-      "from": "src/views/**/*",
-      "to": "build/src/views/"
-    },
-    {
       "from": "src/static/**/*",
       "to": "build/src/static/"
     },
