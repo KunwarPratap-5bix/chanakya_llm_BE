@@ -5,6 +5,5 @@ export * from './export-pdf';
 export * from './file-upload';
 export * from './import-file';
 export * from './logger';
-export * from './redis';
 export * from './s3';
 export * from './validate';

@@ -1,28 +1,33 @@
-import OpenAI from 'openai';
+import axios from 'axios';
 import { logger } from './logger';
 
-// const openai = new OpenAI({
-//     apiKey: process.env.OPENAI_API_KEY,
-// });
-
 export const getAiResponse = async (messages: any[]) => {
+    const start = Date.now();
     try {
-        console.log('--------------------->AI Response<---------------------');
-        // const response = await openai.chat.completions.create({
-        //     model: process.env.OPENAI_MODEL || 'gpt-4o',
-        //     messages: messages,
-        // });
+        const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
-        // return {
-        return '--------------------->AI Response<---------------------';
+        const response = await axios.post(
+            GEMINI_API,
+            {
+                model: process.env.GEMINI_AI_MODEL || 'gemini-3-flash-preview',
 
-        //     // content: response.choices[0]?.message?.content || '',
-        //     // metadata: {
-        //     //     model: response.model,
-        //     //     tokensIn: response.usage?.prompt_tokens,
-        //     //     tokensOut: response.usage?.completion_tokens,
-        //     // }
-        // }
+                messages: messages.map(msg => ({
+                    role: msg.role || 'user',
+                    content: msg.content,
+                })),
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${process.env.GEMINI_AI_API_KEY}`,
+                },
+            }
+        );
+
+        return {
+            data: response.data,
+            latencyMs: Date.now() - start,
+        };
     } catch (error) {
         logger.error('Error getting AI response:', error);
         throw error;

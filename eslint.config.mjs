@@ -1,7 +1,7 @@
 import globals from 'globals';
 import pluginJs from '@eslint/js';
 import tseslint from 'typescript-eslint';
-// import prettier from 'eslint-plugin-prettier';
+import prettier from 'eslint-plugin-prettier';
 
 export default [
     {
@@ -64,7 +64,7 @@ export default [
             'no-param-reassign': 'off',
             'space-in-parens': 'error',
             'consistent-return': 'off',
-            // 'prettier/prettier': 'error',
+            'prettier/prettier': 'error',
             quotes: ['error', 'single'],
             'no-underscore-dangle': 'off',
             'no-restricted-syntax': 'off',

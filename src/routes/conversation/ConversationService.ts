@@ -1,17 +1,70 @@
 import { Request, Response } from 'express';
-import { logger, getAiResponse } from '@utils';
 import ConversationDao from '../../dao/ConversationDao';
 import MessageDao from '../../dao/MessageDao';
 import { ChatRole, Status } from '@enums';
-import { CommonId } from '@schemas';
+import { CommonId, IMessage } from '@schemas';
+import { getAiResponse } from '@lib/utils';
 
 class ConversationService {
+    // async startConversation(req: Request, res: Response) {
+    //     try {
+    //         const user = req.user._id;
+
+    //         const { title, firstMessage } = req.body;
+
+    //         const conversation = await ConversationDao.create({
+    //             user,
+    //             title: title || 'New Conversation',
+    //             status: Status.ACTIVE,
+    //         });
+
+    //         if (firstMessage) {
+    //             await MessageDao.create({
+    //                 conversationId: conversation._id,
+    //                 role: ChatRole.USER,
+    //                 content: firstMessage,
+    //             });
+
+    //             const aiResponse = await getAiResponse([{ role: ChatRole.USER, content: firstMessage }]);
+
+    //             const choice = aiResponse.data?.choices?.[0];
+
+    //             const usage = aiResponse.data?.usage;
+
+    //             const formattedMessage: IMessage = {
+    //                 conversationId: conversation._id,
+    //                 role: ChatRole.ASSISTANT,
+    //                 content: choice?.message?.content || '',
+    //                 metadata: {
+    //                     model: aiResponse.data?.model,
+    //                     tokensIn: usage?.prompt_tokens,
+    //                     tokensOut: usage?.completion_tokens,
+    //                     latencyMs: aiResponse.latencyMs,
+    //                 },
+    //             };
+
+    //             await MessageDao.create(formattedMessage);
+    //         }
+
+    //         return res.success(conversation, req.__('CONVERSATION_STARTED'));
+    //     } catch (error: any) {
+    //         logger.error('Error starting conversation:', error);
+    //         return res.serverError(null, req.__('GENERAL_ERROR'), error);
+    //     }
+    // }
+
     async startConversation(req: Request, res: Response) {
-        try {
-            const user = req.user._id;
+        const user = req.user ? req.user._id : undefined;
 
-            const { title, firstMessage } = req.body;
+        const { title, firstMessage } = req.body;
 
+        let aiResponseData: any = null;
+
+        if (firstMessage) {
+            aiResponseData = await getAiResponse([{ role: ChatRole.USER, content: firstMessage }]);
+        }
+
+        if (req.user) {
             const conversation = await ConversationDao.create({
                 user,
                 title: title || 'New Conversation',
@@ -19,144 +72,150 @@ class ConversationService {
             });
 
             if (firstMessage) {
-                // Save user message
                 await MessageDao.create({
                     conversationId: conversation._id,
                     role: ChatRole.USER,
                     content: firstMessage,
                 });
 
-                // Get AI response
-                const aiResponse = await getAiResponse([{ role: ChatRole.USER, content: firstMessage }]);
+                const choice = aiResponseData?.data?.choices?.[0];
+                const usage = aiResponseData?.data?.usage;
 
-                // Save AI response
-                await MessageDao.create({
+                const formattedMessage: IMessage = {
                     conversationId: conversation._id,
                     role: ChatRole.ASSISTANT,
-                    content: aiResponse as string,
-                });
+                    content: choice?.message?.content || '',
+                    metadata: {
+                        model: aiResponseData?.data?.model,
+                        tokensIn: usage?.prompt_tokens,
+                        tokensOut: usage?.completion_tokens,
+                        latencyMs: aiResponseData?.latencyMs,
+                    },
+                };
+
+                await MessageDao.create(formattedMessage);
             }
 
             return res.success(conversation, req.__('CONVERSATION_STARTED'));
-        } catch (error: any) {
-            logger.error('Error starting conversation:', error);
-            return res.serverError(null, req.__('GENERAL_ERROR'), error);
         }
+
+        if (firstMessage) {
+            const choice = aiResponseData?.data?.choices?.[0];
+            const usage = aiResponseData?.data?.usage;
+
+            return res.success(
+                {
+                    response: choice?.message?.content || '',
+                    metadata: {
+                        model: aiResponseData?.data?.model,
+                        tokensIn: usage?.prompt_tokens,
+                        tokensOut: usage?.completion_tokens,
+                        latencyMs: aiResponseData?.latencyMs,
+                    },
+                },
+                req.__('CONVERSATION_STARTED_GUEST')
+            );
+        }
+
+        return res.success({ response: null }, req.__('CONVERSATION_STARTED_GUEST'));
     }
 
     async sendMessage(req: Request, res: Response) {
-        try {
-            const { id } = req.params as unknown as CommonId;
+        const { id } = req.params as unknown as CommonId;
 
-            const { message } = req.body;
+        const { message } = req.body;
 
-            const user = req.user._id;
+        const user = req.user._id;
 
-            const conversation = await ConversationDao.getById(id);
+        const conversation = await ConversationDao.getById(id);
 
-            if (!conversation || conversation.user.toString() !== user.toString()) {
-                return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
-            }
-
-            // Save user message
-            await MessageDao.create({
-                conversationId: conversation._id,
-                role: ChatRole.USER,
-                content: message,
-            });
-
-            // Get context (all previous messages)
-            const messages = await MessageDao.getByConversationId(conversation._id);
-
-            const context = messages.map(msg => ({
-                role: msg.role,
-                content: msg.content,
-            }));
-
-            // Get AI response
-            const aiResponse = await getAiResponse(context);
-
-            // Save AI response
-            const savedAiMessage = await MessageDao.create({
-                conversationId: conversation._id,
-                role: ChatRole.ASSISTANT,
-                content: aiResponse as string,
-            });
-
-            return res.success(savedAiMessage, req.__('MESSAGE_SENT'));
-        } catch (error: any) {
-            logger.error('Error sending message:', error);
-            return res.serverError(null, req.__('GENERAL_ERROR'), error);
+        if (!conversation || conversation.user.toString() !== user.toString()) {
+            return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
         }
+
+        await MessageDao.create({
+            conversationId: conversation._id,
+            role: ChatRole.USER,
+            content: message,
+        });
+
+        const messages = await MessageDao.getByConversationId(conversation._id);
+
+        const context = messages.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+        }));
+
+        const aiResponse = await getAiResponse(context);
+
+        const choice = aiResponse.data?.choices?.[0];
+
+        const usage = aiResponse.data?.usage;
+
+        const formattedMessage: IMessage = {
+            conversationId: conversation._id,
+            role: ChatRole.ASSISTANT,
+            content: choice?.message?.content || '',
+            metadata: {
+                model: aiResponse.data?.model,
+                tokensIn: usage?.prompt_tokens,
+                tokensOut: usage?.completion_tokens,
+                latencyMs: aiResponse.latencyMs,
+            },
+        };
+
+        const savedAiMessage = await MessageDao.create(formattedMessage);
+
+        return res.success(savedAiMessage, req.__('MESSAGE_SENT'));
     }
 
     async getMessages(req: Request, res: Response) {
-        try {
-            const { id } = req.params as unknown as CommonId;
+        const { id } = req.params as unknown as CommonId;
 
-            if (!id) return res.badRequest(null, 'conversationId is required');
+        if (!id) return res.badRequest(null, 'conversationId is required');
 
-            const conversation = await ConversationDao.getById(id);
+        const conversation = await ConversationDao.getById(id);
 
-            if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
+        if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
 
-            const messages = await MessageDao.getByConversationId(id);
+        const messages = await MessageDao.getByConversationId(id);
 
-            return res.success(messages, req.__('MESSAGES_FETCHED'));
-        } catch (error: any) {
-            logger.error('Error fetching messages:', error);
-            return res.serverError(null, req.__('GENERAL_ERROR'), error);
-        }
+        return res.success(messages, req.__('MESSAGES_FETCHED'));
     }
 
     async getConversations(req: Request, res: Response) {
-        try {
-            const user = req.user._id;
+        const user = req.user._id;
 
-            const conversations = await ConversationDao.getByUserId(user);
+        const conversations = await ConversationDao.getByUserId(user);
 
-            return res.success(conversations, req.__('CONVERSATIONS_FETCHED'));
-        } catch (error: any) {
-            logger.error('Error fetching conversations:', error);
-            return res.serverError(null, req.__('GENERAL_ERROR'), error);
-        }
+        return res.success(conversations, req.__('CONVERSATIONS_FETCHED'));
     }
 
     async deleteConversation(req: Request, res: Response) {
-        try {
-            const { id } = req.params as unknown as CommonId;
+        const { id } = req.params as unknown as CommonId;
 
-            await ConversationDao.update({ id, data: { status: Status.ARCHIVED } });
+        await ConversationDao.update({ id, data: { status: Status.ARCHIVED } });
 
-            return res.success(null, req.__('CONVERSATION_DELETED'));
-        } catch (error: any) {
-            logger.error('Error deleting conversation:', error);
-            return res.serverError(null, req.__('GENERAL_ERROR'), error);
-        }
+        return res.success(null, req.__('CONVERSATION_DELETED'));
     }
 
     async renameConversation(req: Request, res: Response) {
-        try {
-            const { id } = req.params as unknown as CommonId;
+        const { id } = req.params as unknown as CommonId;
 
-            const { title } = req.body;
+        const { title } = req.body;
 
-            if (!title) return res.badRequest(null, 'title is required');
+        if (!title) return res.badRequest(null, 'title is required');
 
-            const conversation = await ConversationDao.getById(id);
+        const conversation = await ConversationDao.getById(id);
 
-            if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
+        if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
 
-            await ConversationDao.update({
-                id,
-                data: { title },
-            });
+        await ConversationDao.update({
+            id,
+            data: { title },
+        });
 
-            return res.success(null, req.__('CONVERSATION_RENAMED'));
-        } catch (error: any) {
-            logger.error('Error renaming conversation:', error);
-            return res.serverError(null, req.__('GENERAL_ERROR'), error);
-        }
+        return res.success(null, req.__('CONVERSATION_RENAMED'));
     }
 }
 

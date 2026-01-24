@@ -1,7 +1,6 @@
 import { Namespace, Socket } from 'socket.io';
 import { createSocketResponse } from './utils/socketResponse';
 import { logger } from '@utils';
-import { addUserSocket, removeUserSocket } from './utils/socketStore';
 import { verifyToken } from './utils/auth';
 
 export const setupBaseNamespace = (nsp: Namespace) => {
@@ -14,7 +13,6 @@ export const setupBaseNamespace = (nsp: Namespace) => {
 
         logger.info(`🟢 [BASE] User ${user._id} connected (${socket.id})`);
 
-        await addUserSocket(user._id.toString(), socket.id);
 
         socketResponse.success('connected', { socketId: socket.id }, 'CONNECTED_SUCCESS');
 
@@ -39,7 +37,6 @@ export const setupBaseNamespace = (nsp: Namespace) => {
             if (socket.data.pingInterval) {
                 clearInterval(socket.data.pingInterval);
             }
-            await removeUserSocket(user._id.toString(), socket.id);
             logger.info(`🔴 [BASE] User ${user._id} disconnected (${reason})`);
         });
 

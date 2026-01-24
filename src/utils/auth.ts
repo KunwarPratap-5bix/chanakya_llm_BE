@@ -2,15 +2,13 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import { sign, verify } from 'jsonwebtoken';
 import { IUserDoc, TypesObjectId } from '@schemas';
 import { getLanguage, getPlatform } from './common';
-import { SessionStatus, UserAccountType } from '@enums';
+import { SessionStatus } from '@enums';
 import { SignUserToken, VerifyUserAccess } from '@dto';
 import { logger } from '@utils';
 import UserDao from '../dao/UserDao';
 import { __ } from '@lib/i18n';
 import SessionDao from '../dao/SessionDao';
 import moment from 'moment';
-
-const accountType = [UserAccountType.SUPER_ADMIN, UserAccountType.SEEKER];
 
 export const signToken = ({ sub, iat, aud, sessionID }: SignUserToken) =>
     sign({ sub, iat, aud, sessionID }, process.env.JWT_SECRET);
@@ -47,13 +45,6 @@ export const verifyUserAccess = async ({
                 error: __(language, 'USER_NOT_FOUND'),
             };
         }
-
-        // if (user.status === Status.INACTIVE) {
-        //     return {
-        //         success: false,
-        //         error: __(language, 'YOUR_ACCOUNT_SUSPENDED'),
-        //     };
-        // }
 
         if (user.authTokenIssuedAt !== decoded.iat) {
             return {
@@ -97,11 +88,14 @@ export const verifyUserAccess = async ({
     };
 };
 
-export const verifyToken = (permission?: string) =>
+export const verifyToken = (permission?: string, optional: boolean = false) =>
     (async (req: Request, res: Response, next: NextFunction) => {
         const token = <string>req.headers.authorization;
         const platform = getPlatform(req);
         const language = getLanguage(req);
+        if (!token && optional) {
+            return next();
+        }
         const response = await verifyUserAccess({
             token,
             permission,

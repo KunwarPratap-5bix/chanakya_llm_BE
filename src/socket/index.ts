@@ -4,8 +4,6 @@ import https from 'https';
 import { logger } from '@utils';
 import { setupBaseNamespace } from './baseNameSpace';
 import { validateHeaders } from './middlewares';
-// import { sessionMiddleware } from 'src/middlewares';
-// import { wrapSocketSession } from './middlewares/session';
 
 export const initSocket = async (server: http.Server | https.Server) => {
     const io = new Server(server, {
@@ -20,7 +18,6 @@ export const initSocket = async (server: http.Server | https.Server) => {
     });
 
     validateHeaders(io);
-    // io.use(wrapSocketSession(sessionMiddleware));
 
     io.on('connection', socket => {
         logger.warn(`⚠️ Blocking connection on default namespace for socket ${socket.id}`);

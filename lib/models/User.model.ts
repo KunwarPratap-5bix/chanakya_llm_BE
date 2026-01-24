@@ -19,12 +19,10 @@ const UserSchema = new Schema<IUserDoc>(
         countryCode: {
             type: String,
             trim: true,
-            // required: true,
         },
         phone: {
             type: String,
             trim: true,
-            // required: true,
         },
         formattedPhone: {
             type: String,
@@ -46,7 +44,6 @@ const UserSchema = new Schema<IUserDoc>(
         isMobileVerified: {
             type: Boolean,
             trim: true,
-            // default: false,
         },
         password: {
             type: String,
@@ -56,7 +53,6 @@ const UserSchema = new Schema<IUserDoc>(
         isEmailVerified: {
             type: Boolean,
             trim: true,
-            // default: false,
         },
     },
     {

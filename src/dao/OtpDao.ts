@@ -38,7 +38,6 @@ class OtpDao {
         const matchCriteria: FilterQueryIOtp = {
             countryCode,
             phone,
-            // isVerified: false,
         };
 
         if (user) {

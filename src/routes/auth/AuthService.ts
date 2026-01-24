@@ -45,7 +45,6 @@ class AuthService {
             status: Status.PENDING,
         };
 
-        // Only add the relevant key
         if (email) {
             userData.isEmailVerified = false;
         } else if (phone) {
@@ -68,16 +67,14 @@ class AuthService {
                 token: generateOtp(),
                 validTill: moment().add(otpValidityMinutes, 'minutes').unix(),
             } as IOtp;
-
+            // const template,
+            // const subject,
+            // const emailData,
+            //         const fromEmail,
             console.log('--------------------->EMAIL SENT<---------------------');
-            //  sendEmail({
-            //      to: email,
-            //      subject: 'Your OTP Code',
-            //      // include token and expiry // added code
-            //      html: `Your OTP is ${otpData.token}. It is valid for ${otpValidityMinutes} minutes.`,
-            //  }).catch(error => {
-            //      logger.error(`AuthService:: requestOtp -> failed to send otpVerification Email to ${email}`, error);
-            //  });
+            // sendMail(template, subject, email, emailData, fromEmail).catch(error => {
+            //     logger.error(`AuthService:: requestOtp -> failed to send otpVerification Email to ${email}`, error);
+            // });
         } else {
             otpData = {
                 user: user?._id as unknown as TypesObjectId,

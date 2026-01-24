@@ -47,9 +47,7 @@ export interface DecryptionData {
 }
 
 export * from './Conversation.schema';
-export * from './Country.schema';
 export * from './Message.schema';
-export * from './Notification.schema';
 export * from './Otp.schema';
 export * from './Session.schema';
 export * from './User.schema';
