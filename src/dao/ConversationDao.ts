@@ -25,7 +25,10 @@ class ConversationDao {
     }
 
     async getByUserId(user: TypesObjectId): Promise<IConversationDoc[]> {
-        return Conversation.find({ user, status: { $ne: Status.ARCHIVED } }).sort({ updatedAt: -1 });
+        return Conversation.find({ user, status: { $ne: Status.ARCHIVED } }).sort({
+            isPinned: -1,
+            updatedAt: -1,
+        });
     }
 }
 

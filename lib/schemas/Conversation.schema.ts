@@ -6,6 +6,7 @@ export interface IConversation {
     user: TypesObjectId;
     title?: string;
     status: Status;
+    isPinned: boolean;
 }
 
 export interface IConversationDoc extends IConversation, Document {

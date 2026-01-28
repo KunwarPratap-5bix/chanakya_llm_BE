@@ -112,6 +112,8 @@ const validationMessages: ValidationMessages = Object.freeze({
     CONVERSATION_RENAMED: 'تم تغيير اسم المحادثة بنجاح.',
     CONVERSATION_NOT_FOUND: 'المحادثة غير موجودة.',
     MESSAGE_SENT: 'تم إرسال الرسالة بنجاح.',
+    CONVERSATION_PINNED: 'تم تثبيت المحادثة بنجاح.',
+    CONVERSATION_UNPINNED: 'تم إلغاء تثبيت المحادثة بنجاح.',
 });
 
 const formatKeyName = (keyName: string): string => validationKeys[keyName.replace(/\.\d+/, '')] ?? keyName;

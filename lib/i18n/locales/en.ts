@@ -130,6 +130,8 @@ const validationMessages: ValidationMessages = Object.freeze({
     CONVERSATION_RENAMED: 'Conversation renamed successfully.',
     CONVERSATION_NOT_FOUND: 'Conversation not found.',
     MESSAGE_SENT: 'Message sent successfully.',
+    CONVERSATION_PINNED: 'Conversation pinned successfully.',
+    CONVERSATION_UNPINNED: 'Conversation unpinned successfully.',
 });
 
 const formatKeyName = (keyName: string): string => validationKeys[keyName.replace(/\.\d+/, '')] ?? keyName;

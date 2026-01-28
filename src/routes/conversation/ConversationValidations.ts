@@ -5,8 +5,9 @@ const startConversation = joi.object().keys({
     firstMessage: joi.string().trim().optional(),
 });
 
-const renameConversation = joi.object().keys({
-    title: joi.string().trim().required(),
+const updateConversation = joi.object().keys({
+    title: joi.string().trim().optional(),
+    isPinned: joi.boolean().optional(),
 });
 
 const conversationIdParam = joi.object().keys({
@@ -19,7 +20,7 @@ const sendMessage = joi.object().keys({
 
 export default {
     startConversation,
-    renameConversation,
+    updateConversation,
     conversationIdParam,
     sendMessage,
 };

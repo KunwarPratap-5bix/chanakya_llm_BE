@@ -626,10 +626,10 @@ paths:
                 400:
                     $ref: '#/components/responses/BadRequestError'
 
-    /conversation/{id}/rename:
+    /conversation/{id}/update:
         patch:
-            summary: Rename a conversation
-            operationId: renameConversation
+            summary: Update a conversation
+            operationId: updateConversation
             tags:
                 - Conversation
             security:
@@ -650,17 +650,19 @@ paths:
                     application/json:
                         example:
                             title: "Updated Conversation Title"
+                            isPinned: true
                         schema:
                             type: object
-                            required:
-                                - title
                             properties:
                                 title:
                                     type: string
                                     description: New title for the conversation
+                                isPinned:
+                                    type: boolean
+                                    description: Pin or unpin the conversation
             responses:
                 200:
-                    description: Conversation renamed successfully
+                    description: Conversation updated successfully
                     content:
                         application/json:
                             schema:

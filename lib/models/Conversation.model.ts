@@ -18,6 +18,10 @@ const ConversationSchema = new Schema<IConversationDoc>(
             enum: Object.values(Status),
             default: Status.ACTIVE,
         },
+        isPinned: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         id: false,

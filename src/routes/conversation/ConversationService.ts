@@ -199,23 +199,34 @@ class ConversationService {
         return res.success(null, req.__('CONVERSATION_DELETED'));
     }
 
-    async renameConversation(req: Request, res: Response) {
+    async updateConversation(req: Request, res: Response) {
         const { id } = req.params as unknown as CommonId;
 
-        const { title } = req.body;
+        const { title, isPinned } = req.body;
 
-        if (!title) return res.badRequest(null, 'title is required');
+        if (title) {
+            const conversation = await ConversationDao.getById(id);
 
-        const conversation = await ConversationDao.getById(id);
+            if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
 
-        if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
+            await ConversationDao.update({
+                id,
+                data: { title },
+            });
+        }
 
-        await ConversationDao.update({
-            id,
-            data: { title },
-        });
+        if (isPinned) {
+            const conversation = await ConversationDao.getById(id);
 
-        return res.success(null, req.__('CONVERSATION_RENAMED'));
+            if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
+
+            await ConversationDao.update({
+                id,
+                data: { isPinned },
+            });
+        }
+
+        return res.success(null, req.__('SUCCESS'));
     }
 }
 

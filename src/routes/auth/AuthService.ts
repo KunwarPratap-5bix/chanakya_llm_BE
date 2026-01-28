@@ -8,7 +8,7 @@ import {
     ValidatePhoneOtpRequest,
     VerifyOtpBody,
 } from '@dto';
-import { CommonId, IOtp, ISession, IUserDoc, TypesObjectId } from '@schemas';
+import { IOtp, ISession, IUserDoc, TypesObjectId } from '@schemas';
 import { OtpType, SessionStatus, Status, VerifyType } from '@enums';
 import { sendMail } from '@mailer';
 import { sendSMS } from '@sms';
@@ -56,9 +56,9 @@ class AuthService {
 
         const otpValidityMinutes = process.env.OTP_VALIDITY_MINUTES ?? 5;
 
-        let otpData;
+        let otp: IOtp | null = null;
         if (email) {
-            otpData = {
+            otp = {
                 user: user?._id as unknown as TypesObjectId,
                 otpType: OtpType.REGISTER,
                 email,
@@ -66,17 +66,17 @@ class AuthService {
                 isVerified: false,
                 token: generateOtp(),
                 validTill: moment().add(otpValidityMinutes, 'minutes').unix(),
-            } as IOtp;
-            // const template,
-            // const subject,
-            // const emailData,
-            //         const fromEmail,
+            };
+
             console.log('--------------------->EMAIL SENT<---------------------');
-            // sendMail(template, subject, email, emailData, fromEmail).catch(error => {
-            //     logger.error(`AuthService:: requestOtp -> failed to send otpVerification Email to ${email}`, error);
-            // });
+
+            sendMail('user-email-verify', req.__('VERIFICATION_EMAIL'), email, {
+                token: otp.token,
+            }).catch(error => {
+                logger.error(`AuthService:: requestOtp -> failed to send user-email-verify email to ${email}`, error);
+            });
         } else {
-            otpData = {
+            otp = {
                 user: user?._id as unknown as TypesObjectId,
                 otpType: OtpType.REGISTER,
                 countryCode,
@@ -85,12 +85,12 @@ class AuthService {
                 isVerified: false,
                 token: generateOtp(),
                 validTill: moment().add(otpValidityMinutes, 'minutes').unix(),
-            } as IOtp;
+            };
             const formatedNumber = countryCode + phone;
             sendSMS({
                 msg91Payload: {
                     template_id: '',
-                    recipients: [{ mobiles: formatedNumber, var1: otpData.token }],
+                    recipients: [{ mobiles: formatedNumber, var1: otp.token }],
                 },
             }).catch(error => {
                 logger.error(
@@ -104,7 +104,7 @@ class AuthService {
             user: user._id,
             countryCode,
             phone,
-            data: otpData,
+            data: otp,
         });
 
         const session = await SessionDao.create({
@@ -120,7 +120,7 @@ class AuthService {
             sessionID: String(session._id),
         });
 
-        return res.success({ token, user: userObj, validTill: otpData.validTill }, req.__('USER_CREATED'));
+        return res.success({ token, user: userObj, validTill: otp.validTill }, req.__('USER_CREATED'));
     }
 
     async login(req: Request, res: Response) {
@@ -244,7 +244,7 @@ class AuthService {
                 return res.warn(null, req.__(errorMessage));
             }
 
-            const otp = {
+            otp = {
                 user: user?._id as unknown as TypesObjectId,
                 otpType,
                 email,
@@ -362,8 +362,7 @@ class AuthService {
     }
 
     async getProfile(req: Request, res: Response) {
-        const { id } = req.query as unknown as CommonId;
-
+        const { _id: id } = req.user;
         const user = await UserDao.getUserById({
             id,
         });

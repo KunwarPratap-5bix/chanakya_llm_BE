@@ -38,11 +38,11 @@ router.delete(
 );
 
 router.patch(
-    '/:id/rename',
+    '/:id/update',
     verifyToken(),
     validate(ConversationValidations.conversationIdParam, 'params'),
-    validate(ConversationValidations.renameConversation),
-    ConversationService.renameConversation as RequestHandler
+    validate(ConversationValidations.updateConversation),
+    ConversationService.updateConversation as RequestHandler
 );
 
 export { router };
