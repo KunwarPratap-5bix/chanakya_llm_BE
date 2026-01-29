@@ -648,18 +648,37 @@ paths:
                 required: true
                 content:
                     application/json:
-                        example:
-                            title: "Updated Conversation Title"
-                            isPinned: true
                         schema:
-                            type: object
-                            properties:
-                                title:
-                                    type: string
-                                    description: New title for the conversation
-                                isPinned:
-                                    type: boolean
-                                    description: Pin or unpin the conversation
+                            oneOf:
+                                - title: Rename Conversation
+                                  type: object
+                                  properties:
+                                      title:
+                                          type: string
+                                          description: New title for the conversation
+                                  required:
+                                      - title
+                                - title: Pin/Unpin Conversation
+                                  type: object
+                                  properties:
+                                      isPinned:
+                                          type: boolean
+                                          description: Flag to pin (true) or unpin (false) the conversation
+                                  required:
+                                      - isPinned
+                        examples:
+                            RENAME:
+                                summary: Rename action
+                                value:
+                                    title: "New Conversation Title"
+                            PIN:
+                                summary: Pin action
+                                value:
+                                    isPinned: true
+                            UNPIN:
+                                summary: Unpin action
+                                value:
+                                    isPinned: false
             responses:
                 200:
                     description: Conversation updated successfully
@@ -833,8 +852,8 @@ paths:
                                         properties:
                                             location:
                                                 type: array
-                                                items:
-                                                    type: string
+                                    items:
+                                        type: string
                                                 description: List of file location
             responses:
                 200:
