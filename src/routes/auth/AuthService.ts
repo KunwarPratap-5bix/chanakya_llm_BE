@@ -382,7 +382,7 @@ class AuthService {
         await UserDao.updateUser({
             id,
             data: {
-                status: Status.INACTIVE,
+                status: Status.ARCHIVED,
                 authTokenIssuedAt: 0,
             },
         });
