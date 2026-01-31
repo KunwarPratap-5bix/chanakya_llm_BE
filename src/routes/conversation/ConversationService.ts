@@ -56,18 +56,43 @@ class ConversationService {
     async startConversation(req: Request, res: Response) {
         const user = req.user ? req.user._id : undefined;
 
-        const { title, firstMessage } = req.body;
-
+        const { firstMessage } = req.body;
         let aiResponseData: any = null;
 
+        let conversationTitle = 'New Conversation';
         if (firstMessage) {
-            aiResponseData = await getAiResponse([{ role: ChatRole.USER, content: firstMessage }]);
+            aiResponseData = await getAiResponse([
+                {
+                    role: ChatRole.USER,
+                    content: `Task:
+1. Provide a short, catchy title (max 5 words) for this conversation.
+2. Provide your response to the user's message.
+
+Format:
+TITLE: <title>
+CONTENT: <response content>
+
+User Message: ${firstMessage}`,
+                },
+            ]);
+
+            const fullContent = aiResponseData?.data?.choices?.[0]?.message?.content || '';
+            const titleMatch = fullContent.match(/TITLE:\s*(.*)/i);
+            const contentMatch = fullContent.match(/CONTENT:\s*([\s\S]*)/i);
+
+            if (titleMatch && contentMatch) {
+                conversationTitle = titleMatch[1].trim();
+                aiResponseData.data.choices[0].message.content = contentMatch[1].trim();
+            } else if (titleMatch) {
+                conversationTitle = titleMatch[1].trim();
+                aiResponseData.data.choices[0].message.content = fullContent.replace(/TITLE:.*\n?/i, '').trim();
+            }
         }
 
         if (req.user) {
             const conversation = await ConversationDao.create({
                 user,
-                title: title || 'New Conversation',
+                title: conversationTitle,
                 status: Status.ACTIVE,
             });
 
@@ -96,7 +121,7 @@ class ConversationService {
                 await MessageDao.create(formattedMessage);
             }
 
-            return res.success(conversation, req.__('CONVERSATION_STARTED'));
+            return res.success(conversation, req.__(''));
         }
 
         if (firstMessage) {
@@ -105,6 +130,7 @@ class ConversationService {
 
             return res.success(
                 {
+                    title: conversationTitle,
                     response: choice?.message?.content || '',
                     metadata: {
                         model: aiResponseData?.data?.model,
@@ -113,11 +139,11 @@ class ConversationService {
                         latencyMs: aiResponseData?.latencyMs,
                     },
                 },
-                req.__('CONVERSATION_STARTED_GUEST')
+                req.__('')
             );
         }
 
-        return res.success({ response: null }, req.__('CONVERSATION_STARTED_GUEST'));
+        return res.success({ response: null }, req.__(''));
     }
 
     async sendMessage(req: Request, res: Response) {
@@ -166,7 +192,7 @@ class ConversationService {
 
         const savedAiMessage = await MessageDao.create(formattedMessage);
 
-        return res.success(savedAiMessage, req.__('MESSAGE_SENT'));
+        return res.success(savedAiMessage, req.__(''));
     }
 
     async getMessages(req: Request, res: Response) {
@@ -180,7 +206,7 @@ class ConversationService {
 
         const messages = await MessageDao.getByConversationId(id);
 
-        return res.success(messages, req.__('MESSAGES_FETCHED'));
+        return res.success(messages, req.__(''));
     }
 
     async getConversations(req: Request, res: Response) {
@@ -188,7 +214,7 @@ class ConversationService {
 
         const conversations = await ConversationDao.getByUserId(user);
 
-        return res.success(conversations, req.__('CONVERSATIONS_FETCHED'));
+        return res.success(conversations, req.__(''));
     }
 
     async deleteConversation(req: Request, res: Response) {
@@ -196,7 +222,7 @@ class ConversationService {
 
         await ConversationDao.update({ id, data: { status: Status.ARCHIVED } });
 
-        return res.success(null, req.__('CONVERSATION_DELETED'));
+        return res.success(null, req.__(''));
     }
 
     async updateConversation(req: Request, res: Response) {
@@ -226,7 +252,7 @@ class ConversationService {
             });
         }
 
-        return res.success(null, req.__('SUCCESS'));
+        return res.success(null, req.__(''));
     }
 }
 

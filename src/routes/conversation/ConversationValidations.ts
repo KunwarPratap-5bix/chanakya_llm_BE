@@ -1,7 +1,6 @@
 import { commonValidations, joi } from '@utils';
 
 const startConversation = joi.object().keys({
-    title: joi.string().trim().optional(),
     firstMessage: joi.string().trim().optional(),
 });
 

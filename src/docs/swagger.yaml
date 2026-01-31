@@ -479,17 +479,17 @@ paths:
                 content:
                     application/json:
                         example:
-                            title: "My Tech Question"
+                            # title: "My Tech Question"
                             firstMessage: "Hello, can you help me with a coding problem?"
                         schema:
                             type: object
                             properties:
-                                title:
-                                    type: string
-                                    description: Optional title for the conversation
+                                # title:
+                                #     type: string
+                                #     description: Optional title for the conversation
                                 firstMessage:
                                     type: string
-                                    description: Optional first message to start the conversation
+                                    description: First message to start the conversation
             responses:
                 200:
                     description: Conversation started successfully
