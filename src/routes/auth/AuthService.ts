@@ -548,116 +548,116 @@ class AuthService {
     //     }
     // }
 
-    async googleAuthUrl(req: Request, res: Response) {
-        const { signup } = req.query;
-        const isSignup = signup === 'true' || signup === true;
+    // async googleAuthUrl(req: Request, res: Response) {
+    //     const { signup } = req.query;
+    //     const isSignup = signup === 'true' || signup === true;
 
-        const statePayload = {
-            signup: isSignup,
-        };
+    //     const statePayload = {
+    //         signup: isSignup,
+    //     };
 
-        const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
-        const options = {
-            redirect_uri: process.env.GOOGLE_REDIRECT_URI as string,
-            client_id: process.env.GOOGLE_CLIENT_ID as string,
-            access_type: 'offline',
-            response_type: 'code',
-            prompt: 'consent',
-            scope: [
-                'https://www.googleapis.com/auth/userinfo.profile',
-                'https://www.googleapis.com/auth/userinfo.email',
-            ].join(' '),
-            state: JSON.stringify(statePayload),
-        };
+    //     const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+    //     const options = {
+    //         redirect_uri: process.env.GOOGLE_REDIRECT_URI as string,
+    //         client_id: process.env.GOOGLE_CLIENT_ID as string,
+    //         access_type: 'offline',
+    //         response_type: 'code',
+    //         prompt: 'consent',
+    //         scope: [
+    //             'https://www.googleapis.com/auth/userinfo.profile',
+    //             'https://www.googleapis.com/auth/userinfo.email',
+    //         ].join(' '),
+    //         state: JSON.stringify(statePayload),
+    //     };
 
-        const queryString = qs.stringify(options);
-        const authUrl = `${rootUrl}?${queryString}`;
+    //     const queryString = qs.stringify(options);
+    //     const authUrl = `${rootUrl}?${queryString}`;
 
-        return res.success({ url: authUrl });
-    }
+    //     return res.success({ url: authUrl });
+    // }
 
-    async googleCallback(req: Request, res: Response) {
-        try {
-            const { code, state, error } = req.query;
+    // async googleCallback(req: Request, res: Response) {
+    //     try {
+    //         const { code, state, error } = req.query;
 
-            const frontendBaseUrl = process.env.FE_LINK || process.env.FEHOST_PROVIDER;
+    //         const frontendBaseUrl = process.env.FE_LINK || process.env.FEHOST_PROVIDER;
 
-            if (error || !code) {
-                return res.redirect(`${frontendBaseUrl}?error=google_login_failed`);
-            }
+    //         if (error || !code) {
+    //             return res.redirect(`${frontendBaseUrl}?error=google_login_failed`);
+    //         }
 
-            const tokenResponse = await axios.post(
-                'https://oauth2.googleapis.com/token',
-                qs.stringify({
-                    code,
-                    client_id: process.env.GOOGLE_CLIENT_ID,
-                    client_secret: process.env.GOOGLE_CLIENT_SECRET,
-                    redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-                    grant_type: 'authorization_code',
-                }),
-                {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                }
-            );
+    //         const tokenResponse = await axios.post(
+    //             'https://oauth2.googleapis.com/token',
+    //             qs.stringify({
+    //                 code,
+    //                 client_id: process.env.GOOGLE_CLIENT_ID,
+    //                 client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    //                 redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+    //                 grant_type: 'authorization_code',
+    //             }),
+    //             {
+    //                 headers: {
+    //                     'Content-Type': 'application/x-www-form-urlencoded',
+    //                 },
+    //             }
+    //         );
 
-            const { access_token } = tokenResponse.data;
+    //         const { access_token } = tokenResponse.data;
 
-            const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                },
-            });
+    //         const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+    //             headers: {
+    //                 Authorization: `Bearer ${access_token}`,
+    //             },
+    //         });
 
-            const userInfo = userInfoResponse.data;
-            const { email, name, picture, id: googleId } = userInfo;
+    //         const userInfo = userInfoResponse.data;
+    //         const { email, name, picture, id: googleId } = userInfo;
 
-            let user = await UserDao.getUserByEmail({ email });
-            const authTokenIssuedAt = moment().unix();
+    //         let user = await UserDao.getUserByEmail({ email });
+    //         const authTokenIssuedAt = moment().unix();
 
-            if (!user) {
-                user = await UserDao.createUser({
-                    name,
-                    email,
-                    googleId,
-                    avatar: picture,
-                    isEmailVerified: true,
-                    status: Status.ACTIVE,
-                    authTokenIssuedAt,
-                } as any);
-            } else {
-                await UserDao.updateUser({
-                    id: user._id,
-                    data: {
-                        googleId,
-                        authTokenIssuedAt,
-                    },
-                });
-                user.authTokenIssuedAt = authTokenIssuedAt;
-            }
+    //         if (!user) {
+    //             user = await UserDao.createUser({
+    //                 name,
+    //                 email,
+    //                 googleId,
+    //                 avatar: picture,
+    //                 isEmailVerified: true,
+    //                 status: Status.ACTIVE,
+    //                 authTokenIssuedAt,
+    //             } as any);
+    //         } else {
+    //             await UserDao.updateUser({
+    //                 id: user._id,
+    //                 data: {
+    //                     googleId,
+    //                     authTokenIssuedAt,
+    //                 },
+    //             });
+    //             user.authTokenIssuedAt = authTokenIssuedAt;
+    //         }
 
-            const session = await SessionDao.create({
-                user: user._id as unknown as TypesObjectId,
-                platform: getPlatform(req),
-                validTill: moment().add(process.env.SESSION_VALIDITY_DAYS || 30, 'days').unix(),
-            } as unknown as ISession);
+    //         const session = await SessionDao.create({
+    //             user: user._id as unknown as TypesObjectId,
+    //             platform: getPlatform(req),
+    //             validTill: moment().add(process.env.SESSION_VALIDITY_DAYS || 30, 'days').unix(),
+    //         } as unknown as ISession);
 
-            const token = signToken({
-                sub: `${user._id}`,
-                iat: authTokenIssuedAt,
-                aud: getPlatform(req),
-                sessionID: String(session._id),
-            });
+    //         const token = signToken({
+    //             sub: `${user._id}`,
+    //             iat: authTokenIssuedAt,
+    //             aud: getPlatform(req),
+    //             sessionID: String(session._id),
+    //         });
 
-            // Redirect back to frontend with token
-            return res.redirect(`${frontendBaseUrl}/callback?token=${token}&isExisting=true`);
-        } catch (error) {
-            logger.error('Google OAuth Error:', error);
-            const frontendBaseUrl = process.env.FE_LINK || process.env.FEHOST_PROVIDER;
-            return res.redirect(`${frontendBaseUrl}?error=oauth_failed`);
-        }
-    }
+    //         // Redirect back to frontend with token
+    //         return res.redirect(`${frontendBaseUrl}/callback?token=${token}&isExisting=true`);
+    //     } catch (error) {
+    //         logger.error('Google OAuth Error:', error);
+    //         const frontendBaseUrl = process.env.FE_LINK || process.env.FEHOST_PROVIDER;
+    //         return res.redirect(`${frontendBaseUrl}?error=oauth_failed`);
+    //     }
+    // }
 
     private isRequestingEmailOTP = (otpType: OtpType, verifyType: VerifyType) => {
         const PHONE_OTP = [OtpType.CHANGE_PHONE, OtpType.VERIFY_PHONE]; // ask agrani sir

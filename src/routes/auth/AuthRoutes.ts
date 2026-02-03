@@ -43,7 +43,7 @@ router.post('/reset-password', validate(AuthValidations.resetPassword), AuthServ
 
 // router.post('/google-login', validate(AuthValidations.googleLogin), AuthService.googleLogin as RequestHandler);
 
-router.get('/google', AuthService.googleAuthUrl.bind(AuthService) as RequestHandler);
-router.get('/google/callback', AuthService.googleCallback.bind(AuthService) as RequestHandler);
+// router.get('/google', AuthService.googleAuthUrl.bind(AuthService) as RequestHandler);
+// router.get('/google/callback', AuthService.googleCallback.bind(AuthService) as RequestHandler);
 
 export { router };
