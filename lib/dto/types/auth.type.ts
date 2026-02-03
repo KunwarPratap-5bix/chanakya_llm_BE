@@ -97,3 +97,7 @@ export interface ResetPassword {
     phone?: string;
     password: string;
 }
+
+// export interface GoogleLoginBody {
+//     idToken: string;
+// }

@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import moment from 'moment-timezone';
+import axios from 'axios';
+import qs from 'qs';
 import {
     ChangePassword,
     RequestOtpBody,
@@ -7,6 +9,7 @@ import {
     ValidateEmailOtpRequest,
     ValidatePhoneOtpRequest,
     VerifyOtpBody,
+    // GoogleLoginBody,
 } from '@dto';
 import { IOtp, ISession, IUserDoc, TypesObjectId } from '@schemas';
 import { OtpType, SessionStatus, Status, VerifyType } from '@enums';
@@ -479,6 +482,181 @@ class AuthService {
         });
 
         return res.success(null, req.__('PASSWORD_CHANGE_SUCCESS'));
+    }
+
+    // async googleLogin(req: Request, res: Response) {
+    //     const { idToken }: GoogleLoginBody = req.body;
+
+    //     try {
+    //         const googleResponse = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+    //         const { email, name, picture, sub: googleId } = googleResponse.data;
+
+    //         if (!email) {
+    //             return res.warn(null, req.__('GOOGLE_LOGIN_FAILED'));
+    //         }
+
+    //         let user = await UserDao.getUserByEmail({ email });
+
+    //         const authTokenIssuedAt = moment().unix();
+
+    //         if (!user) {
+    //             user = await UserDao.createUser({
+    //                 name,
+    //                 email,
+    //                 googleId,
+    //                 avatar: picture,
+    //                 isEmailVerified: true,
+    //                 status: Status.ACTIVE,
+    //                 authTokenIssuedAt,
+    //             } as any);
+    //         } else {
+    //             await UserDao.updateUser({
+    //                 id: user._id,
+    //                 data: {
+    //                     googleId,
+    //                     authTokenIssuedAt,
+    //                 },
+    //             });
+    //             user.authTokenIssuedAt = authTokenIssuedAt;
+    //         }
+
+    //         const session = await SessionDao.create({
+    //             user: user._id as unknown as TypesObjectId,
+    //             platform: getPlatform(req),
+    //             validTill: moment().add(process.env.SESSION_VALIDITY_DAYS || 30, 'days').unix(),
+    //         } as unknown as ISession);
+
+    //         const userJson = getUserObj(user as unknown as IUserDoc);
+
+    //         const token = signToken({
+    //             sub: `${user._id}`,
+    //             iat: authTokenIssuedAt,
+    //             aud: getPlatform(req),
+    //             sessionID: String(session._id),
+    //         });
+
+    //         return res.success(
+    //             {
+    //                 token,
+    //                 user: userJson,
+    //             },
+    //             req.__('LOGIN_SUCCESS')
+    //         );
+    //     } catch (error) {
+    //         logger.error('Google Login Error:', error);
+    //         return res.serverError(null, req.__('GOOGLE_LOGIN_FAILED'));
+    //     }
+    // }
+
+    async googleAuthUrl(req: Request, res: Response) {
+        const { signup } = req.query;
+        const isSignup = signup === 'true' || signup === true;
+
+        const statePayload = {
+            signup: isSignup,
+        };
+
+        const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+        const options = {
+            redirect_uri: process.env.GOOGLE_REDIRECT_URI as string,
+            client_id: process.env.GOOGLE_CLIENT_ID as string,
+            access_type: 'offline',
+            response_type: 'code',
+            prompt: 'consent',
+            scope: [
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/userinfo.email',
+            ].join(' '),
+            state: JSON.stringify(statePayload),
+        };
+
+        const queryString = qs.stringify(options);
+        const authUrl = `${rootUrl}?${queryString}`;
+
+        return res.success({ url: authUrl });
+    }
+
+    async googleCallback(req: Request, res: Response) {
+        try {
+            const { code, state, error } = req.query;
+
+            const frontendBaseUrl = process.env.FE_LINK || process.env.FEHOST_PROVIDER;
+
+            if (error || !code) {
+                return res.redirect(`${frontendBaseUrl}?error=google_login_failed`);
+            }
+
+            const tokenResponse = await axios.post(
+                'https://oauth2.googleapis.com/token',
+                qs.stringify({
+                    code,
+                    client_id: process.env.GOOGLE_CLIENT_ID,
+                    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                    redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+                    grant_type: 'authorization_code',
+                }),
+                {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                }
+            );
+
+            const { access_token } = tokenResponse.data;
+
+            const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+                headers: {
+                    Authorization: `Bearer ${access_token}`,
+                },
+            });
+
+            const userInfo = userInfoResponse.data;
+            const { email, name, picture, id: googleId } = userInfo;
+
+            let user = await UserDao.getUserByEmail({ email });
+            const authTokenIssuedAt = moment().unix();
+
+            if (!user) {
+                user = await UserDao.createUser({
+                    name,
+                    email,
+                    googleId,
+                    avatar: picture,
+                    isEmailVerified: true,
+                    status: Status.ACTIVE,
+                    authTokenIssuedAt,
+                } as any);
+            } else {
+                await UserDao.updateUser({
+                    id: user._id,
+                    data: {
+                        googleId,
+                        authTokenIssuedAt,
+                    },
+                });
+                user.authTokenIssuedAt = authTokenIssuedAt;
+            }
+
+            const session = await SessionDao.create({
+                user: user._id as unknown as TypesObjectId,
+                platform: getPlatform(req),
+                validTill: moment().add(process.env.SESSION_VALIDITY_DAYS || 30, 'days').unix(),
+            } as unknown as ISession);
+
+            const token = signToken({
+                sub: `${user._id}`,
+                iat: authTokenIssuedAt,
+                aud: getPlatform(req),
+                sessionID: String(session._id),
+            });
+
+            // Redirect back to frontend with token
+            return res.redirect(`${frontendBaseUrl}/callback?token=${token}&isExisting=true`);
+        } catch (error) {
+            logger.error('Google OAuth Error:', error);
+            const frontendBaseUrl = process.env.FE_LINK || process.env.FEHOST_PROVIDER;
+            return res.redirect(`${frontendBaseUrl}?error=oauth_failed`);
+        }
     }
 
     private isRequestingEmailOTP = (otpType: OtpType, verifyType: VerifyType) => {

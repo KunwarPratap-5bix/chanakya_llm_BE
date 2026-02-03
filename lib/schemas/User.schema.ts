@@ -1,5 +1,5 @@
 import { Document, Model } from 'mongoose';
-import { Status, UserAccountType } from '@enums';
+import { Status } from '@enums';
 import { TypesObjectId } from '@schemas';
 
 export interface IUser {
@@ -10,9 +10,10 @@ export interface IUser {
     formattedPhone: string;
     status: Status;
     avatar?: string;
+    googleId?: string;
     authTokenIssuedAt: number;
     isMobileVerified?: boolean;
-    password: string;
+    password?: string;
     isEmailVerified?: boolean;
 }
 

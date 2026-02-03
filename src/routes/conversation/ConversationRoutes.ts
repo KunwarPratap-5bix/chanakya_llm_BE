@@ -19,6 +19,7 @@ router.get(
     '/:id/messages',
     verifyToken(),
     validate(ConversationValidations.conversationIdParam, 'params'),
+    validate(ConversationValidations.paginationQuery, 'query'),
     ConversationService.getMessages as RequestHandler
 );
 

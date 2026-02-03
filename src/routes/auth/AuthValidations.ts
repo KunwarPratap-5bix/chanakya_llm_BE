@@ -79,6 +79,10 @@ const resetPassword = logIn.keys({
     password: commonValidations.password,
 });
 
+// const googleLogin = joi.object().keys({
+//     idToken: joi.string().trim().required(),
+// });
+
 export default {
     register,
     requestOtp,
@@ -86,4 +90,5 @@ export default {
     logIn,
     changePassword,
     resetPassword,
+    // googleLogin,
 };

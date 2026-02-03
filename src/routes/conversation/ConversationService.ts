@@ -3,7 +3,8 @@ import ConversationDao from '../../dao/ConversationDao';
 import MessageDao from '../../dao/MessageDao';
 import { ChatRole, Status } from '@enums';
 import { CommonId, IMessage } from '@schemas';
-import { getAiResponse } from '@lib/utils';
+import { getAiResponse, getOpenAiResponse } from '@utils';
+import { AiMessage, AiResponse } from '@dto';
 
 class ConversationService {
     // async startConversation(req: Request, res: Response) {
@@ -57,11 +58,11 @@ class ConversationService {
         const user = req.user ? req.user._id : undefined;
 
         const { firstMessage } = req.body;
-        let aiResponseData: any = null;
+        let aiResponseData: AiResponse | null = null;
 
         let conversationTitle = 'New Conversation';
         if (firstMessage) {
-            aiResponseData = await getAiResponse([
+            aiResponseData = await getOpenAiResponse([
                 {
                     role: ChatRole.USER,
                     content: `Task:
@@ -76,14 +77,16 @@ User Message: ${firstMessage}`,
                 },
             ]);
 
-            const fullContent = aiResponseData?.data?.choices?.[0]?.message?.content || '';
+            if (!aiResponseData || !aiResponseData.data.choices[0]) return res.serverError(null, 'AI Response Error');
+
+            const fullContent = aiResponseData.data.choices[0].message.content || '';
             const titleMatch = fullContent.match(/TITLE:\s*(.*)/i);
             const contentMatch = fullContent.match(/CONTENT:\s*([\s\S]*)/i);
 
-            if (titleMatch && contentMatch) {
+            if (titleMatch && contentMatch && titleMatch[1] && contentMatch[1]) {
                 conversationTitle = titleMatch[1].trim();
                 aiResponseData.data.choices[0].message.content = contentMatch[1].trim();
-            } else if (titleMatch) {
+            } else if (titleMatch && titleMatch[1]) {
                 conversationTitle = titleMatch[1].trim();
                 aiResponseData.data.choices[0].message.content = fullContent.replace(/TITLE:.*\n?/i, '').trim();
             }
@@ -148,9 +151,7 @@ User Message: ${firstMessage}`,
 
     async sendMessage(req: Request, res: Response) {
         const { id } = req.params as unknown as CommonId;
-
         const { message } = req.body;
-
         const user = req.user._id;
 
         const conversation = await ConversationDao.getById(id);
@@ -165,17 +166,46 @@ User Message: ${firstMessage}`,
             content: message,
         });
 
-        const messages = await MessageDao.getByConversationId(conversation._id);
+        const totalMessages = await MessageDao.getCountByConversationId(conversation._id);
+        const windowSize = 20;
+        const recentMessages = await MessageDao.getRecentByConversationId(conversation._id, windowSize);
 
-        const context = messages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-        }));
+        let currentSummary = conversation.summary;
+        // If the conversation is long (> 50 messages), summarize the part before those 20
+        if (totalMessages > 50 && !currentSummary) {
+            const olderHistoryCount = totalMessages - windowSize;
+            const olderMessages = await MessageDao.getOlderMessages(conversation._id, olderHistoryCount);
+            const historyText = olderMessages.map(m => `${m.role}: ${m.content}`).join('\n');
 
-        const aiResponse = await getAiResponse(context);
+            const summaryResponse = await getOpenAiResponse([
+                {
+                    role: ChatRole.USER,
+                    content: `Please provide a concise but comprehensive summary of the following conversation history. Focus on key topics and decisions made:\n\n${historyText}`,
+                },
+            ]);
+
+            currentSummary = summaryResponse.data?.choices?.[0]?.message?.content || '';
+            await ConversationDao.update({ id, data: { summary: currentSummary } });
+        }
+
+        const context: AiMessage[] = [];
+        if (currentSummary) {
+            context.push({
+                role: ChatRole.SYSTEM,
+                content: `Here is a summary of the older part of this conversation: ${currentSummary}`,
+            });
+        }
+
+        recentMessages.forEach(msg => {
+            context.push({
+                role: msg.role,
+                content: msg.content,
+            });
+        });
+
+        const aiResponse = await getOpenAiResponse(context);
 
         const choice = aiResponse.data?.choices?.[0];
-
         const usage = aiResponse.data?.usage;
 
         const formattedMessage: IMessage = {
@@ -197,6 +227,8 @@ User Message: ${firstMessage}`,
 
     async getMessages(req: Request, res: Response) {
         const { id } = req.params as unknown as CommonId;
+        const page = parseInt(req.query.page as string) || 1;
+        const perPage = parseInt(req.query.perPage as string) || 20;
 
         if (!id) return res.badRequest(null, 'conversationId is required');
 
@@ -204,9 +236,24 @@ User Message: ${firstMessage}`,
 
         if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
 
-        const messages = await MessageDao.getByConversationId(id);
+        const { data: messages, total } = await MessageDao.getAndCount({
+            conversationId: id,
+            page,
+            perPage,
+        });
 
-        return res.success(messages, req.__(''));
+        return res.success(
+            {
+                messages,
+                pagination: {
+                    total,
+                    page,
+                    perPage,
+                    pages: Math.ceil(total / perPage),
+                },
+            },
+            req.__('')
+        );
     }
 
     async getConversations(req: Request, res: Response) {

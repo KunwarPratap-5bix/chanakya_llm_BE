@@ -1,4 +1,4 @@
-import { Status, UserAccountType } from '@enums';
+import { Status } from '@enums';
 import { IUser, TypesObjectId } from '@schemas';
 
 export interface EmailAddress {

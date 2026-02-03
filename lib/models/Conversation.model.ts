@@ -13,6 +13,10 @@ const ConversationSchema = new Schema<IConversationDoc>(
             type: String,
             trim: true,
         },
+        summary: {
+            type: String,
+            trim: true,
+        },
         status: {
             type: String,
             enum: Object.values(Status),

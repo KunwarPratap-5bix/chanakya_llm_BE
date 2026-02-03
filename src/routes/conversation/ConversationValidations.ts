@@ -17,9 +17,15 @@ const sendMessage = joi.object().keys({
     message: joi.string().trim().required(),
 });
 
+const paginationQuery = joi.object().keys({
+    page: joi.number().integer().min(1).optional(),
+    perPage: joi.number().integer().min(1).max(100).optional(),
+});
+
 export default {
     startConversation,
     updateConversation,
     conversationIdParam,
     sendMessage,
+    paginationQuery,
 };

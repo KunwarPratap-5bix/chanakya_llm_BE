@@ -1,6 +1,6 @@
 import { model, Schema, UpdateQuery } from 'mongoose';
 import { IUserDoc, IUserModel } from '@schemas';
-import { Status, UserAccountType } from '@enums';
+import { Status } from '@enums';
 import { logger } from '@utils';
 import { compare, hash } from 'bcryptjs';
 
@@ -37,6 +37,10 @@ const UserSchema = new Schema<IUserDoc>(
             type: String,
             trim: true,
         },
+        googleId: {
+            type: String,
+            trim: true,
+        },
         authTokenIssuedAt: {
             type: Number,
             default: 0,
@@ -48,7 +52,7 @@ const UserSchema = new Schema<IUserDoc>(
         password: {
             type: String,
             trim: true,
-            required: true,
+            required: false,
         },
         isEmailVerified: {
             type: Boolean,

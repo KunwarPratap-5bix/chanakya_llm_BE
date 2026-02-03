@@ -5,6 +5,7 @@ import { Status } from '@lib/enums';
 export interface IConversation {
     user: TypesObjectId;
     title?: string;
+    summary?: string;
     status: Status;
     isPinned: boolean;
 }
