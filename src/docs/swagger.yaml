@@ -365,6 +365,47 @@ paths:
                 400:
                     $ref: '#/components/responses/BadRequestError'
 
+    /auth/update-profile:
+        put:
+            summary: Update user profile
+            operationId: updateProfile
+            tags:
+                - Authentication
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            name: "John Doe Updated"
+                            avatar: "https://example.com/avatar.jpg"
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                avatar:
+                                    type: string
+            responses:
+                200:
+                    description: Profile updated successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
     /auth/change-password:
         put:
             summary: Change password
@@ -460,6 +501,50 @@ paths:
                                     - $ref: '#/components/schemas/ApiResponse'
                 400:
                     $ref: '#/components/responses/BadRequestError'
+
+    /auth/google-login:
+        post:
+            summary: Login with Google
+            operationId: googleLogin
+            tags:
+                - Authentication
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        example:
+                            idToken: "google-id-token"
+                        schema:
+                            type: object
+                            required:
+                                - idToken
+                            properties:
+                                idToken:
+                                    type: string
+            responses:
+                200:
+                    description: Login successful
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            token:
+                                                type: string
+                                            user:
+                                                $ref: '#/components/schemas/User'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+
 
     /conversation/start:
         post:
@@ -861,3 +946,58 @@ paths:
                                     - $ref: '#/components/schemas/ApiResponse'
                 400:
                     $ref: '#/components/responses/BadRequestError'
+
+    /auth/analyze-prescription:
+        post:
+            summary: Analyze prescription image using AI
+            operationId: analyzePrescription
+            tags:
+                - Authentication
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            properties:
+                                image:
+                                    type: string
+                                    format: binary
+                                    description: Prescription image file
+            responses:
+                200:
+                    description: Prescription analyzed successfully and result sent to Telegram
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            prescription:
+                                                type: string
+                                            medicine:
+                                                type: array
+                                                items:
+                                                    type: object
+                                                    properties:
+                                                        name:
+                                                            type: string
+                                                        dosage:
+                                                            type: string
+                                                        frequency:
+                                                            type: string
+                                            diagnosis:
+                                                type: string
+                                            revisit:
+                                                type: string
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+

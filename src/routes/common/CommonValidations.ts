@@ -1,4 +1,3 @@
 import { commonValidations, joi } from '@utils';
 
-export default {
-};
+export default {};

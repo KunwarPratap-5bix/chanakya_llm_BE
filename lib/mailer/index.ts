@@ -39,9 +39,7 @@ const sendMail = async (
     const locals: EmailData = { custom: emailData };
     locals.email_logo = process.env.LOGO_PATH ?? 'LOGO_PATH';
     locals.site_title = process.env.SITE_TITLE ?? 'SITE_TITLE';
-    locals.site_url = process.env.LOGO_PATH
-        ? `${process.env.LOGO_PATH?.replace('/logo.svg', '')}`
-        : '';
+    locals.site_url = process.env.LOGO_PATH ? `${process.env.LOGO_PATH?.replace('/logo.svg', '')}` : '';
 
     const renderedTemplate = await templateRenderer.render(template, locals);
 

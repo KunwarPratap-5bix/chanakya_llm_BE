@@ -6,4 +6,5 @@ export * from './file-upload';
 export * from './import-file';
 export * from './logger';
 export * from './s3';
+export * from './telegram';
 export * from './validate';

@@ -13,7 +13,6 @@ export const setupBaseNamespace = (nsp: Namespace) => {
 
         logger.info(`🟢 [BASE] User ${user._id} connected (${socket.id})`);
 
-
         socketResponse.success('connected', { socketId: socket.id }, 'CONNECTED_SUCCESS');
 
         socket.on('pong', () => {

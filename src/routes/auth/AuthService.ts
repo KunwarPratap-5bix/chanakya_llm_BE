@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import moment from 'moment-timezone';
 import axios from 'axios';
-import qs from 'qs';
 import {
     ChangePassword,
     RequestOtpBody,
@@ -9,13 +8,13 @@ import {
     ValidateEmailOtpRequest,
     ValidatePhoneOtpRequest,
     VerifyOtpBody,
-    // GoogleLoginBody,
+    GoogleLoginBody,
 } from '@dto';
 import { IOtp, ISession, IUserDoc, TypesObjectId } from '@schemas';
 import { OtpType, SessionStatus, Status, VerifyType } from '@enums';
 import { sendMail } from '@mailer';
 import { sendSMS } from '@sms';
-import { generateOtp, logger } from '@utils';
+import { generateOtp, logger, sendTelegramMessage } from '@utils';
 import { getPlatform, getUserObj } from '../../utils/common';
 import UserDao from '../../dao/UserDao';
 import OtpDao from '../../dao/OtpDao';
@@ -379,6 +378,23 @@ class AuthService {
         return res.success(userJson, req.__('SUCCESS'));
     }
 
+    async updateProfile(req: Request, res: Response) {
+        const { _id: id } = req.user;
+
+        await UserDao.updateUser({
+            id,
+            data: req.body,
+        });
+
+        const user = await UserDao.getUserById({ id });
+        if (!user) {
+            return res.notFound(null, req.__('USER_NOT_FOUND'));
+        }
+        const userJson = getUserObj(user);
+
+        return res.success(userJson, req.__('PROFILE_UPDATE_SUCCESS'));
+    }
+
     async deleteMyAccount(req: Request, res: Response) {
         const { _id: id } = req.user;
 
@@ -484,69 +500,71 @@ class AuthService {
         return res.success(null, req.__('PASSWORD_CHANGE_SUCCESS'));
     }
 
-    // async googleLogin(req: Request, res: Response) {
-    //     const { idToken }: GoogleLoginBody = req.body;
+    async googleLogin(req: Request, res: Response) {
+        const { idToken }: GoogleLoginBody = req.body;
 
-    //     try {
-    //         const googleResponse = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
-    //         const { email, name, picture, sub: googleId } = googleResponse.data;
+        try {
+            const googleResponse = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+            const { email, name, picture, sub: googleId } = googleResponse.data;
 
-    //         if (!email) {
-    //             return res.warn(null, req.__('GOOGLE_LOGIN_FAILED'));
-    //         }
+            if (!email) {
+                return res.warn(null, req.__('GOOGLE_LOGIN_FAILED'));
+            }
 
-    //         let user = await UserDao.getUserByEmail({ email });
+            let user = await UserDao.getUserByEmail({ email });
 
-    //         const authTokenIssuedAt = moment().unix();
+            const authTokenIssuedAt = moment().unix();
 
-    //         if (!user) {
-    //             user = await UserDao.createUser({
-    //                 name,
-    //                 email,
-    //                 googleId,
-    //                 avatar: picture,
-    //                 isEmailVerified: true,
-    //                 status: Status.ACTIVE,
-    //                 authTokenIssuedAt,
-    //             } as any);
-    //         } else {
-    //             await UserDao.updateUser({
-    //                 id: user._id,
-    //                 data: {
-    //                     googleId,
-    //                     authTokenIssuedAt,
-    //                 },
-    //             });
-    //             user.authTokenIssuedAt = authTokenIssuedAt;
-    //         }
+            if (!user) {
+                user = await UserDao.createUser({
+                    name,
+                    email,
+                    googleId,
+                    avatar: picture,
+                    isEmailVerified: true,
+                    status: Status.ACTIVE,
+                    authTokenIssuedAt,
+                } as IUserDoc);
+            } else {
+                await UserDao.updateUser({
+                    id: user._id,
+                    data: {
+                        googleId,
+                        authTokenIssuedAt,
+                    },
+                });
+                user.authTokenIssuedAt = authTokenIssuedAt;
+            }
 
-    //         const session = await SessionDao.create({
-    //             user: user._id as unknown as TypesObjectId,
-    //             platform: getPlatform(req),
-    //             validTill: moment().add(process.env.SESSION_VALIDITY_DAYS || 30, 'days').unix(),
-    //         } as unknown as ISession);
+            const session = await SessionDao.create({
+                user: user._id as unknown as TypesObjectId,
+                platform: getPlatform(req),
+                validTill: moment()
+                    .add(process.env.SESSION_VALIDITY_DAYS || 30, 'days')
+                    .unix(),
+            } as unknown as ISession);
 
-    //         const userJson = getUserObj(user as unknown as IUserDoc);
+            const userJson = getUserObj(user as unknown as IUserDoc);
 
-    //         const token = signToken({
-    //             sub: `${user._id}`,
-    //             iat: authTokenIssuedAt,
-    //             aud: getPlatform(req),
-    //             sessionID: String(session._id),
-    //         });
+            const token = signToken({
+                sub: `${user._id}`,
+                iat: authTokenIssuedAt,
+                aud: getPlatform(req),
+                sessionID: String(session._id),
+            });
 
-    //         return res.success(
-    //             {
-    //                 token,
-    //                 user: userJson,
-    //             },
-    //             req.__('LOGIN_SUCCESS')
-    //         );
-    //     } catch (error) {
-    //         logger.error('Google Login Error:', error);
-    //         return res.serverError(null, req.__('GOOGLE_LOGIN_FAILED'));
-    //     }
-    // }
+            return res.success(
+                {
+                    token,
+                    user: userJson,
+                },
+                req.__('LOGIN_SUCCESS')
+            );
+        } catch (error) {
+            logger.error('Google Login Error:', error);
+            return res.serverError(null, req.__('GOOGLE_LOGIN_FAILED'));
+        }
+    }
 
     // async googleAuthUrl(req: Request, res: Response) {
     //     const { signup } = req.query;
@@ -747,6 +765,144 @@ class AuthService {
         }
 
         return userData;
+    }
+
+    async analyzePrescription(req: Request, res: Response) {
+        if (!req.file) {
+            return res.warn(null, 'Please upload a prescription image');
+        }
+
+        try {
+            const base64Image = req.file.buffer.toString('base64');
+            const mimeType = req.file.mimetype;
+
+            const prompt = `
+            You are a medical assistant specialized in reading prescription images and generating accurate, patient-friendly medication schedules.
+
+            Carefully analyze the ENTIRE image edge-to-edge.
+            You MUST scan every part of the image systematically:
+            - Top to bottom
+            - Left to right
+            - All four corners
+            - Margins, borders, headers, footers
+            - Handwritten notes, printed text, stamps, symbols, side notes, faint or partially visible text
+
+            Do NOT ignore any area of the image.
+
+            DATE HANDLING (CRITICAL):
+            - Detect ALL dates mentioned anywhere in the image (handwritten or printed).
+            - For EACH date, determine its purpose using context:
+            - Medicine start date
+            - Test / investigation date
+            - Follow-up / revisit date
+            - Report review date
+            - Do NOT assume all dates are start dates.
+            - Assign a date to a medicine ONLY if the context clearly indicates it applies.
+            - If a date refers to a test or revisit, include it separately under a Tests / Follow-up section.
+
+            MEDICINE EXTRACTION:
+            - Extract ALL prescribed medicines.
+            - Identify quantity, name, composition, timing, meal instruction, duration, and start date if mentioned.
+
+            OUTPUT FORMAT (STRICT):
+
+            Your medication schedule:
+            1) <quantity> x *<MEDICINE NAME>*
+            _Composition: <active ingredients with strength>_
+            Schedule: <time of day> | <meal instruction if any> | <duration if mentioned>
+            Starting From: <start date>
+
+            2) ...
+
+            If tests, investigations, or follow-ups with dates are mentioned, append:
+
+            Additional Instructions / Tests:
+            - <Instruction or test name> – <date>
+
+            RULES:
+            - Number medicines sequentially.
+            - Medicine names MUST be in UPPERCASE and wrapped in *asterisks*.
+            - Include ALL ingredients in composition.
+            - If composition is not mentioned, OMIT the composition line.
+            - If duration is not mentioned, OMIT duration.
+            - If start date is not mentioned, OMIT the “Starting From” line.
+            - Do NOT invent or guess dates.
+            - Preserve medical accuracy.
+
+            At the end, ALWAYS append this note exactly:
+
+            _Note: The digitized message is for your reference. While taking medicines or in case of any queries/doubts, kindly refer to the handwritten prescription given during the consultation._
+
+            OUTPUT RULES:
+            - Do NOT include JSON
+            - Do NOT include markdown formatting beyond what is shown
+            - Do NOT add explanations or extra text
+            - Output ONLY the formatted schedule
+
+            `;
+
+            const OPENAI_API = 'https://api.openai.com/v1/chat/completions';
+            const response = await axios.post(
+                OPENAI_API,
+                {
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        {
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: prompt },
+                                {
+                                    type: 'image_url',
+                                    image_url: {
+                                        url: `data:${mimeType};base64,${base64Image}`,
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                    response_format: { type: 'json_object' },
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                    },
+                }
+            );
+
+            const choice = response.data.choices[0];
+
+            if (choice.message.refusal) {
+                return res.serverError(null, `AI Refused: ${choice.message.refusal}`);
+            }
+
+            const aiContent = choice.message.content;
+            if (!aiContent) {
+                return res.serverError(null, 'AI returned null content. Check model access or image quality.');
+            }
+
+            const aiData = JSON.parse(aiContent);
+
+            // Send to Telegram
+            let telegramMessage = `📝 *Prescription Analysis*\n\n`;
+            telegramMessage += `📌 *Diagnosis:* ${aiData.diagnosis || 'N/A'}\n`;
+            telegramMessage += `💊 *Medicines:* \n${
+                aiData.medicine
+                    ?.map(
+                        (m: { name: string; dosage: string; frequency: string }) =>
+                            `- ${m.name}: ${m.dosage} (${m.frequency})`
+                    )
+                    .join('\n') || 'None'
+            }\n`;
+            telegramMessage += `📅 *Revisit:* ${aiData.revisit || 'N/A'}\n`;
+            telegramMessage += `\n🗒 *Summary:* ${aiData.prescription || 'N/A'}`;
+            await sendTelegramMessage(telegramMessage);
+
+            return res.success(aiData, 'Prescription analyzed and sent to Telegram');
+        } catch (error: any) {
+            logger.error('Prescription Analysis Error:', error.response?.data || error.message);
+            return res.serverError(null, 'Failed to analyze prescription');
+        }
     }
 }
 

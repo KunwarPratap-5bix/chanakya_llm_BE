@@ -79,9 +79,14 @@ const resetPassword = logIn.keys({
     password: commonValidations.password,
 });
 
-// const googleLogin = joi.object().keys({
-//     idToken: joi.string().trim().required(),
-// });
+const googleLogin = joi.object().keys({
+    idToken: joi.string().trim().required(),
+});
+
+const updateProfile = joi.object().keys({
+    name: joi.string().trim().min(3).max(30).optional(),
+    avatar: joi.string().trim().optional(),
+});
 
 export default {
     register,
@@ -90,5 +95,6 @@ export default {
     logIn,
     changePassword,
     resetPassword,
-    // googleLogin,
+    googleLogin,
+    updateProfile,
 };

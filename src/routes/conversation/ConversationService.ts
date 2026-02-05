@@ -7,52 +7,6 @@ import { getAiResponse, getOpenAiResponse } from '@utils';
 import { AiMessage, AiResponse } from '@dto';
 
 class ConversationService {
-    // async startConversation(req: Request, res: Response) {
-    //     try {
-    //         const user = req.user._id;
-
-    //         const { title, firstMessage } = req.body;
-
-    //         const conversation = await ConversationDao.create({
-    //             user,
-    //             title: title || 'New Conversation',
-    //             status: Status.ACTIVE,
-    //         });
-
-    //         if (firstMessage) {
-    //             await MessageDao.create({
-    //                 conversationId: conversation._id,
-    //                 role: ChatRole.USER,
-    //                 content: firstMessage,
-    //             });
-
-    //             const aiResponse = await getAiResponse([{ role: ChatRole.USER, content: firstMessage }]);
-
-    //             const choice = aiResponse.data?.choices?.[0];
-
-    //             const usage = aiResponse.data?.usage;
-
-    //             const formattedMessage: IMessage = {
-    //                 conversationId: conversation._id,
-    //                 role: ChatRole.ASSISTANT,
-    //                 content: choice?.message?.content || '',
-    //                 metadata: {
-    //                     model: aiResponse.data?.model,
-    //                     tokensIn: usage?.prompt_tokens,
-    //                     tokensOut: usage?.completion_tokens,
-    //                     latencyMs: aiResponse.latencyMs,
-    //                 },
-    //             };
-
-    //             await MessageDao.create(formattedMessage);
-    //         }
-
-    //         return res.success(conversation, req.__('CONVERSATION_STARTED'));
-    //     } catch (error: any) {
-    //         logger.error('Error starting conversation:', error);
-    //         return res.serverError(null, req.__('GENERAL_ERROR'), error);
-    //     }
-    // }
 
     async startConversation(req: Request, res: Response) {
         const user = req.user ? req.user._id : undefined;
@@ -241,7 +195,6 @@ User Message: ${firstMessage}`,
             page,
             perPage,
         });
-
         return res.success(
             {
                 messages,

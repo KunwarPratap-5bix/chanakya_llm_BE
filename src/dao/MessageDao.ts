@@ -1,3 +1,4 @@
+import { toObjectId } from '@lib/utils';
 import { Message, mongoose } from '@models';
 import { IMessageDoc, Pagination, TypesObjectId } from '@schemas';
 
@@ -18,7 +19,7 @@ class MessageDao {
     }
 
     async getAndCount({ conversationId, page, perPage }: { conversationId: TypesObjectId } & Pagination) {
-        const matchCriteria: FilterQueryIMessage = { conversationId };
+        const matchCriteria: FilterQueryIMessage = { conversationId: toObjectId(String(conversationId)) };
 
         const pipeline: mongoose.PipelineStage[] = [
             {

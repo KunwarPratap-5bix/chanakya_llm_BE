@@ -98,6 +98,6 @@ export interface ResetPassword {
     password: string;
 }
 
-// export interface GoogleLoginBody {
-//     idToken: string;
-// }
+export interface GoogleLoginBody {
+    idToken: string;
+}
