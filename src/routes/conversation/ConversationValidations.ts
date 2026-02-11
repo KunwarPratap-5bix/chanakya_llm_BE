@@ -1,7 +1,8 @@
 import { commonValidations, joi } from '@utils';
 
 const startConversation = joi.object().keys({
-    firstMessage: joi.string().trim().optional(),
+    firstMessage: joi.string().trim().allow('').optional(),
+    fileUrl: joi.string().trim().optional(),
 });
 
 const updateConversation = joi.object().keys({
@@ -14,7 +15,8 @@ const conversationIdParam = joi.object().keys({
 });
 
 const sendMessage = joi.object().keys({
-    message: joi.string().trim().required(),
+    message: joi.string().trim().allow('').optional(),
+    fileUrl: joi.string().trim().optional(),
 });
 
 const paginationQuery = joi.object().keys({

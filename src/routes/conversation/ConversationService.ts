@@ -2,24 +2,20 @@ import { Request, Response } from 'express';
 import ConversationDao from '../../dao/ConversationDao';
 import MessageDao from '../../dao/MessageDao';
 import { ChatRole, Status } from '@enums';
-import { CommonId, IMessage } from '@schemas';
-import { getAiResponse, getOpenAiResponse } from '@utils';
-import { AiMessage, AiResponse } from '@dto';
+import { CommonId, IConversationDoc, IMessage } from '@schemas';
+import { getOpenAiResponse } from '@utils';
+import { AiContent, AiMessage, AiResponse } from '@dto';
 
 class ConversationService {
-
     async startConversation(req: Request, res: Response) {
         const user = req.user ? req.user._id : undefined;
 
-        const { firstMessage } = req.body;
+        const { firstMessage, fileUrl } = req.body;
         let aiResponseData: AiResponse | null = null;
 
         let conversationTitle = 'New Conversation';
-        if (firstMessage) {
-            aiResponseData = await getOpenAiResponse([
-                {
-                    role: ChatRole.USER,
-                    content: `Task:
+        if (firstMessage || fileUrl) {
+            const prompt = `Task:
 1. Provide a short, catchy title (max 5 words) for this conversation.
 2. Provide your response to the user's message.
 
@@ -27,7 +23,17 @@ Format:
 TITLE: <title>
 CONTENT: <response content>
 
-User Message: ${firstMessage}`,
+User Message: ${firstMessage || (fileUrl ? 'Image' : '')}`;
+
+            const aiContent: AiContent[] = [{ type: 'text', text: prompt }];
+            if (fileUrl) {
+                aiContent.push({ type: 'image_url', image_url: { url: fileUrl } });
+            }
+
+            aiResponseData = await getOpenAiResponse([
+                {
+                    role: ChatRole.USER,
+                    content: aiContent,
                 },
             ]);
 
@@ -53,35 +59,57 @@ User Message: ${firstMessage}`,
                 status: Status.ACTIVE,
             });
 
-            if (firstMessage) {
+            if (firstMessage || fileUrl) {
                 await MessageDao.create({
                     conversationId: conversation._id,
                     role: ChatRole.USER,
-                    content: firstMessage,
+                    content: firstMessage || '',
+                    fileUrl,
                 });
 
                 const choice = aiResponseData?.data?.choices?.[0];
                 const usage = aiResponseData?.data?.usage;
+                const response = choice?.message?.content || '';
+                const metadata = {
+                    model: aiResponseData?.data?.model,
+                    tokensIn: usage?.prompt_tokens,
+                    tokensOut: usage?.completion_tokens,
+                    latencyMs: aiResponseData?.latencyMs,
+                };
 
                 const formattedMessage: IMessage = {
                     conversationId: conversation._id,
                     role: ChatRole.ASSISTANT,
-                    content: choice?.message?.content || '',
-                    metadata: {
-                        model: aiResponseData?.data?.model,
-                        tokensIn: usage?.prompt_tokens,
-                        tokensOut: usage?.completion_tokens,
-                        latencyMs: aiResponseData?.latencyMs,
-                    },
+                    content: response,
+                    metadata,
                 };
 
                 await MessageDao.create(formattedMessage);
+
+                const conversationData = conversation.toObject() as Partial<IConversationDoc & { __v: number }>;
+                delete conversationData.createdAt;
+                delete conversationData.updatedAt;
+                delete conversationData.__v;
+
+                return res.success(
+                    {
+                        ...conversationData,
+                        response,
+                        metadata,
+                        fileUrl,
+                    },
+                    req.__('')
+                );
             }
 
-            return res.success(conversation, req.__(''));
+            const conversationData = conversation.toObject() as Partial<IConversationDoc & { __v: number }>;
+            delete conversationData.createdAt;
+            delete conversationData.updatedAt;
+            delete conversationData.__v;
+            return res.success(conversationData, req.__(''));
         }
 
-        if (firstMessage) {
+        if (firstMessage || fileUrl) {
             const choice = aiResponseData?.data?.choices?.[0];
             const usage = aiResponseData?.data?.usage;
 
@@ -105,7 +133,7 @@ User Message: ${firstMessage}`,
 
     async sendMessage(req: Request, res: Response) {
         const { id } = req.params as unknown as CommonId;
-        const { message } = req.body;
+        const { message, fileUrl } = req.body;
         const user = req.user._id;
 
         const conversation = await ConversationDao.getById(id);
@@ -117,7 +145,8 @@ User Message: ${firstMessage}`,
         await MessageDao.create({
             conversationId: conversation._id,
             role: ChatRole.USER,
-            content: message,
+            content: message || '',
+            fileUrl,
         });
 
         const totalMessages = await MessageDao.getCountByConversationId(conversation._id);
@@ -151,10 +180,20 @@ User Message: ${firstMessage}`,
         }
 
         recentMessages.forEach(msg => {
-            context.push({
-                role: msg.role,
-                content: msg.content,
-            });
+            if (msg.fileUrl) {
+                context.push({
+                    role: msg.role,
+                    content: [
+                        { type: 'text', text: msg.content },
+                        { type: 'image_url', image_url: { url: msg.fileUrl } },
+                    ],
+                });
+            } else {
+                context.push({
+                    role: msg.role,
+                    content: msg.content || '',
+                });
+            }
         });
 
         const aiResponse = await getOpenAiResponse(context);
@@ -227,32 +266,103 @@ User Message: ${firstMessage}`,
 
     async updateConversation(req: Request, res: Response) {
         const { id } = req.params as unknown as CommonId;
-
         const { title, isPinned } = req.body;
 
-        if (title) {
-            const conversation = await ConversationDao.getById(id);
+        const conversation = await ConversationDao.getById(id);
+        if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
 
-            if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
+        const data: Partial<IConversationDoc> = {};
+        if (title !== undefined) data.title = title;
+        if (isPinned !== undefined) data.isPinned = isPinned;
 
-            await ConversationDao.update({
-                id,
-                data: { title },
-            });
-        }
-
-        if (isPinned) {
-            const conversation = await ConversationDao.getById(id);
-
-            if (!conversation) return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
-
-            await ConversationDao.update({
-                id,
-                data: { isPinned },
-            });
+        if (Object.keys(data).length > 0) {
+            await ConversationDao.update({ id, data });
         }
 
         return res.success(null, req.__(''));
+    }
+
+    async retryConversation(req: Request, res: Response) {
+        const { id } = req.params as unknown as CommonId;
+        const user = req.user._id;
+
+        const conversation = await ConversationDao.getById(id);
+
+        if (!conversation || conversation.user.toString() !== user.toString()) {
+            return res.notFound(null, req.__('CONVERSATION_NOT_FOUND'));
+        }
+
+        const messages = await MessageDao.getByConversationId(conversation._id);
+        if (messages.length === 0) {
+            return res.badRequest(null, 'No messages found to retry');
+        }
+
+        // Find the last USER message to use for the retry context
+        let lastUserMessageIndex = -1;
+        for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i];
+            if (msg && msg.role === ChatRole.USER) {
+                lastUserMessageIndex = i;
+                break;
+            }
+        }
+
+        if (lastUserMessageIndex === -1) {
+            return res.badRequest(null, 'No user message found to retry');
+        }
+
+        // Build context from history up to the last user message
+        const messagesForContext = messages.slice(0, lastUserMessageIndex + 1);
+
+        // Get the last N messages for the window (matching sendMessage logic)
+        const windowSize = 20;
+        const recentMessages = messagesForContext.slice(-windowSize);
+
+        const context: AiMessage[] = [];
+        if (conversation.summary) {
+            context.push({
+                role: ChatRole.SYSTEM,
+                content: `Here is a summary of the older part of this conversation: ${conversation.summary}`,
+            });
+        }
+
+        recentMessages.forEach(msg => {
+            if (msg && msg.fileUrl) {
+                context.push({
+                    role: msg.role,
+                    content: [
+                        { type: 'text', text: msg.content },
+                        { type: 'image_url', image_url: { url: msg.fileUrl } },
+                    ],
+                });
+            } else if (msg) {
+                context.push({
+                    role: msg.role,
+                    content: msg.content || '',
+                });
+            }
+        });
+
+        const aiResponse = await getOpenAiResponse(context);
+
+        const choice = aiResponse.data?.choices?.[0];
+        const usage = aiResponse.data?.usage;
+
+        const formattedMessage: IMessage = {
+            conversationId: conversation._id,
+            role: ChatRole.ASSISTANT,
+            content: choice?.message?.content || '',
+            metadata: {
+                model: aiResponse.data?.model,
+                tokensIn: usage?.prompt_tokens,
+                tokensOut: usage?.completion_tokens,
+                latencyMs: aiResponse.latencyMs,
+            },
+        };
+
+        const savedAiMessage = await MessageDao.create(formattedMessage);
+
+        return res.success(savedAiMessage, req.__(''));
     }
 }
 

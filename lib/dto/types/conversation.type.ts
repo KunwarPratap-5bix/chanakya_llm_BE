@@ -18,7 +18,15 @@ export interface RenameConversationDto {
 
 export interface AiMessage {
     role: ChatRole | string;
-    content: string;
+    content: string | AiContent[];
+}
+
+export interface AiContent {
+    type: 'text' | 'image_url';
+    text?: string;
+    image_url?: {
+        url: string;
+    };
 }
 
 export interface MessageMetadata {
@@ -52,5 +60,6 @@ export interface CreateMessageDto {
     conversationId: TypesObjectId;
     role: ChatRole;
     content: string;
+    fileUrl?: string;
     metadata?: MessageMetadata;
 }

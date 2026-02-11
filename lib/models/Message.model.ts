@@ -1,6 +1,6 @@
-import { model, Schema, UpdateQuery } from 'mongoose';
+import { model, Schema } from 'mongoose';
 import { IMessageDoc, IMessageModel, ObjectId } from '@schemas';
-import { ChatRole, Status, UserAccountType } from '@enums';
+import { ChatRole } from '@enums';
 
 const MessageSchema = new Schema<IMessageDoc>(
     {
@@ -16,7 +16,10 @@ const MessageSchema = new Schema<IMessageDoc>(
         },
         content: {
             type: String,
-            required: true,
+            // required: true,
+        },
+        fileUrl: {
+            type: String,
         },
         metadata: {
             model: String,

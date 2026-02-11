@@ -5,7 +5,8 @@ import { ChatRole } from '@lib/enums';
 export interface IMessage {
     conversationId: TypesObjectId;
     role: ChatRole;
-    content: string;
+    content?: string;
+    fileUrl?: string;
     metadata?: {
         model?: string;
         tokensIn?: number;

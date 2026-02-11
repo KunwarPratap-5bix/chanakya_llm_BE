@@ -40,7 +40,13 @@ class MessageDao {
         ];
 
         const result = await Message.aggregate(pipeline);
-        return result[0] || { data: [], total: 0 };
+        const response = result[0] || { data: [], total: 0 };
+
+        if (response.data) {
+            response.data.reverse();
+        }
+
+        return response;
     }
 
     async getCountByConversationId(conversationId: TypesObjectId): Promise<number> {

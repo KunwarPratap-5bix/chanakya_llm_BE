@@ -564,13 +564,17 @@ paths:
                 content:
                     application/json:
                         example:
-                            firstMessage: "Hello, can you help me with a coding problem?"
+                            firstMessage: "Analyze this diagram"
+                            fileUrl: "https://your-bucket.s3.region.amazonaws.com/uploads/diagram.png"
                         schema:
                             type: object
                             properties:
                                 firstMessage:
                                     type: string
                                     description: First message to start the conversation
+                                fileUrl:
+                                    type: string
+                                    description: Optional S3 preview URL of the image to analyze
             responses:
                 200:
                     description: Conversation started successfully
@@ -658,7 +662,8 @@ paths:
                 content:
                     application/json:
                         example:
-                            message: "Specify that I want to use Node.js"
+                            message: "Explain the architecture in this image"
+                            fileUrl: "https://your-bucket.s3.region.amazonaws.com/uploads/architecture.png"
                         schema:
                             type: object
                             required:
@@ -667,6 +672,9 @@ paths:
                                 message:
                                     type: string
                                     description: The message to send to the conversation
+                                fileUrl:
+                                    type: string
+                                    description: Optional S3 preview URL of the image to analyze
             responses:
                 200:
                     description: Message sent successfully
@@ -770,6 +778,37 @@ paths:
                                     - $ref: '#/components/schemas/ApiResponse'
                 400:
                     $ref: '#/components/responses/BadRequestError'
+
+    /conversation/{id}/retry:
+        post:
+            summary: Retry the last message in the conversation
+            operationId: retryConversation
+            tags:
+                - Conversation
+            security:
+                - ApiKeyAuth: []
+            parameters:
+                - $ref: '#/components/parameters/headerLanguage'
+                - $ref: '#/components/parameters/headerPlatform'
+                - $ref: '#/components/parameters/headerVersion'
+                - $ref: '#/components/parameters/headerTimeZone'
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                200:
+                    description: New AI response generated successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/ApiResponse'
+                400:
+                    $ref: '#/components/responses/BadRequestError'
+                404:
+                    $ref: '#/components/responses/NotFoundError'
 
     /common/countries:
         get:
@@ -946,58 +985,3 @@ paths:
                                     - $ref: '#/components/schemas/ApiResponse'
                 400:
                     $ref: '#/components/responses/BadRequestError'
-
-    /auth/analyze-prescription:
-        post:
-            summary: Analyze prescription image using AI
-            operationId: analyzePrescription
-            tags:
-                - Authentication
-            parameters:
-                - $ref: '#/components/parameters/headerLanguage'
-                - $ref: '#/components/parameters/headerPlatform'
-                - $ref: '#/components/parameters/headerVersion'
-                - $ref: '#/components/parameters/headerTimeZone'
-            requestBody:
-                required: true
-                content:
-                    multipart/form-data:
-                        schema:
-                            type: object
-                            properties:
-                                image:
-                                    type: string
-                                    format: binary
-                                    description: Prescription image file
-            responses:
-                200:
-                    description: Prescription analyzed successfully and result sent to Telegram
-                    content:
-                        application/json:
-                            schema:
-                                allOf:
-                                    - $ref: '#/components/schemas/ApiResponse'
-                                properties:
-                                    data:
-                                        type: object
-                                        properties:
-                                            prescription:
-                                                type: string
-                                            medicine:
-                                                type: array
-                                                items:
-                                                    type: object
-                                                    properties:
-                                                        name:
-                                                            type: string
-                                                        dosage:
-                                                            type: string
-                                                        frequency:
-                                                            type: string
-                                            diagnosis:
-                                                type: string
-                                            revisit:
-                                                type: string
-                400:
-                    $ref: '#/components/responses/BadRequestError'
-

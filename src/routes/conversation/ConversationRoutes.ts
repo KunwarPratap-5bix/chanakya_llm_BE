@@ -46,4 +46,11 @@ router.patch(
     ConversationService.updateConversation as RequestHandler
 );
 
+router.post(
+    '/:id/retry',
+    verifyToken(),
+    validate(ConversationValidations.conversationIdParam, 'params'),
+    ConversationService.retryConversation as RequestHandler
+);
+
 export { router };

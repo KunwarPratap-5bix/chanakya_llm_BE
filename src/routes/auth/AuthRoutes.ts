@@ -3,7 +3,6 @@ import AuthService from './AuthService';
 import AuthValidations from './AuthValidations';
 import { verifyToken } from '../../utils/auth';
 import { validate } from '../../utils/validations';
-import { upload } from '../../middlewares/upload';
 
 const router = Router();
 
@@ -52,7 +51,4 @@ router.post('/google-login', validate(AuthValidations.googleLogin), AuthService.
 
 // router.get('/google', AuthService.googleAuthUrl.bind(AuthService) as RequestHandler);
 // router.get('/google/callback', AuthService.googleCallback.bind(AuthService) as RequestHandler);
-
-router.post('/analyze-prescription', upload.single('image'), AuthService.analyzePrescription as RequestHandler);
-
 export { router };
