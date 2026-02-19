@@ -54,6 +54,8 @@ export interface AiResponse {
         model: string;
     };
     latencyMs: number;
+    isBlocked?: boolean;
+    blockedReason?: string;
 }
 
 export interface CreateMessageDto {
