@@ -1,60 +1,35 @@
 import axios from 'axios';
 import { logger } from './logger';
-import { AiContent, AiMessage, AiResponse } from '@lib/dto/types/conversation.type';
+import { AiMessage, AiResponse } from '@lib/dto/types/conversation.type';
 
 export const checkModeration = async (text: string): Promise<{ flagged: boolean; reason?: string }> => {
     if (!text || typeof text !== 'string') return { flagged: false };
 
     // Layer 1: Aggressive Keyword Filter (Instant/Zero Latency)
     const criticalKeywords = [
-        'bdsm',
-        'porn',
-        'sex',
-        'sexual',
-        'fetish',
-        'erotica',
-        'nude',
-        'naked',
-        'kink',
-        'dominant',
-        'submissive',
-        'bondage',
-        'xxx',
-        'adult content',
-        'hardcore',
-        'softcore',
-        'lingerie',
-        'sculpting',
-        'pleasure',
-        'arousal',
-        'masturbate',
-        'orgasm',
-        'climax',
-        'intercourse',
-        'sensual',
-        'erotic',
-        'voyeur',
-        'swingers',
-        'threesome',
-        'gangbang',
-        'fetishism',
-        'hentai',
-        'incest',
-        'bestiality',
-        'pedophilia',
-        'rape',
-        'assault',
-        'molestation',
-        'camgirl',
-        'camboy',
-        'escort',
-        'prostitution',
-        'sugar baby',
-        'sugar daddy',
+        'bdsm', 'porn', 'sex', 'sexual', 'fetish', 'erotica', 'nude', 'naked', 'xxx', 
+        'adult content', 'hardcore', 'softcore', 'lingerie', 'arousal', 'masturbate', 
+        'orgasm', 'intercourse', 'sensual', 'erotic', 'voyeur', 'swingers', 'threesome', 
+        'gangbang', 'fetishism', 'hentai', 'incest', 'bestiality', 'pedophilia', 'rape', 
+        'assault', 'molestation', 'camgirl', 'camboy', 'escort', 'prostitution', 
+        'sugar baby', 'sugar daddy', 'bondage','dick',
     ];
+    
+    const contextDependentKeywords = [
+        'dominant', 'submissive', 'pleasure', 'climax', 'kink'
+    ];
+
     const normalizedText = text.toLowerCase();
+    
     if (criticalKeywords.some(kw => normalizedText.includes(kw))) {
-        return { flagged: true, reason: 'Adult/Explicit keywords detected' };
+        return { flagged: true, reason: 'Explicit content detected' };
+    }
+
+    for (const kw of contextDependentKeywords) {
+        const regex = new RegExp(`\\b${kw}\\b`, 'i');
+        if (regex.test(normalizedText)) {
+            return { flagged: true, reason: `Policy violation: ${kw}` };
+        }
     }
 
     // Layer 2: OpenAI Standard Moderation
@@ -70,12 +45,13 @@ export const checkModeration = async (text: string): Promise<{ flagged: boolean;
             }
         );
         const result = response.data.results[0];
+        
         if (result.flagged) {
             const categories = Object.entries(result.categories)
-                .filter(([, isFlagged]) => isFlagged === true)
+                .filter(([_, isFlagged]) => isFlagged === true)
                 .map(([category]) => category)
                 .join(', ');
-            return { flagged: true, reason: categories };
+            return { flagged: true, reason: `Policy Violation: ${categories}` };
         }
     } catch (error: unknown) {
         logger.error('Moderation API call failed:', error instanceof Error ? error.message : String(error));
@@ -91,7 +67,7 @@ export const checkModeration = async (text: string): Promise<{ flagged: boolean;
                     {
                         role: 'system',
                         content:
-                            'You are a strict safety judge. Your only job is to detect if a message contains adult content, sexual lifestyle topics, or sexually suggestive material. Answer ONLY "YES" if it is unsafe/adult, or "NO" if it is safe. Be extremely strict.',
+                            'You are a strict safety judge. Your mission is to detect any adult, 18+, explicit, or sexually suggestive content. Answer ONLY "YES" if it is unsafe/adult, or "NO" if it is safe and appropriate for all ages. Be extremely strict.',
                     },
                     { role: 'user', content: text },
                 ],
@@ -115,6 +91,47 @@ export const checkModeration = async (text: string): Promise<{ flagged: boolean;
     return { flagged: false };
 };
 
+export const checkImageModeration = async (imageUrl: string): Promise<{ flagged: boolean; reason?: string }> => {
+    if (!imageUrl) return { flagged: false };
+
+    try {
+        const response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a safety officer. Analyze the image provided. If it contains any adult content, nudity, sexual suggestiveness, or explicit themes, reply with "FLAGGED". Otherwise, reply with "SAFE". Do not provide any other text.',
+                    },
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: 'Does this image contain adult content?' },
+                            { type: 'image_url', image_url: { url: imageUrl } }
+                        ]
+                    }
+                ],
+                max_tokens: 10
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+                },
+            }
+        );
+
+        const decision = response.data.choices[0]?.message?.content?.toUpperCase();
+        if (decision?.includes('FLAGGED')) {
+            return { flagged: true, reason: 'Image contains adult content' };
+        }
+    } catch (error: unknown) {
+        logger.error('Image Moderation failed:', error instanceof Error ? error.message : String(error));
+    }
+    return { flagged: false };
+};
+
 export const getAiResponse = async (messages: AiMessage[]): Promise<AiResponse> => {
     const start = Date.now();
     const models = [
@@ -129,28 +146,58 @@ export const getAiResponse = async (messages: AiMessage[]): Promise<AiResponse> 
 
     // Check Input Moderation
     for (const msg of messages) {
-        const textToCheck =
-            typeof msg.content === 'string' ? msg.content : msg.content.map((c: AiContent) => c.text).join(' ');
-        const moderation = await checkModeration(textToCheck);
-        if (moderation.flagged) {
-            return {
-                data: {
-                    choices: [
-                        {
-                            message: {
-                                content: `I'm sorry, but I can't fulfill this request. It appears to violate safety policies regarding inappropriate or offensive content. Is there anything else I can help you with?`,
-                                role: 'assistant',
+        if (typeof msg.content === 'string') {
+            const moderation = await checkModeration(msg.content);
+            if (moderation.flagged) {
+                return {
+                    data: {
+                        choices: [
+                            {
+                                message: {
+                                    content: 'I\'m sorry, but I can\'t fulfill this request. My safety guidelines prohibit me from generating or discussing adult or 18+ content. Is there anything else I can help you with?',
+                                    role: 'assistant',
+                                },
+                                index: 0,
+                                finish_reason: 'content_filter',
                             },
-                            index: 0,
-                            finish_reason: 'content_filter',
+                        ],
+                        model: models[0],
+                    },
+                    latencyMs: Date.now() - start,
+                    isBlocked: true,
+                    blockedReason: moderation.reason,
+                } as AiResponse;
+            }
+        } else if (Array.isArray(msg.content)) {
+            for (const content of msg.content) {
+                let moderation: { flagged: boolean; reason?: string } = { flagged: false };
+                if (content.type === 'text' && content.text) {
+                    moderation = await checkModeration(content.text);
+                } else if (content.type === 'image_url' && content.image_url?.url) {
+                    moderation = await checkImageModeration(content.image_url.url);
+                }
+
+                if (moderation.flagged) {
+                    return {
+                        data: {
+                            choices: [
+                                {
+                                    message: {
+                                        content: `I'm sorry, but I can't fulfill this request. My safety guidelines prohibit me from generating or discussing adult or 18+ content. Is there anything else I can help you with?`,
+                                        role: 'assistant',
+                                    },
+                                    index: 0,
+                                    finish_reason: 'content_filter',
+                                },
+                            ],
+                            model: models[0],
                         },
-                    ],
-                    model: models[0],
-                },
-                latencyMs: Date.now() - start,
-                isBlocked: true,
-                blockedReason: moderation.reason,
-            } as AiResponse;
+                        latencyMs: Date.now() - start,
+                        isBlocked: true,
+                        blockedReason: moderation.reason,
+                    } as AiResponse;
+                }
+            }
         }
     }
 
@@ -187,7 +234,7 @@ export const getAiResponse = async (messages: AiMessage[]): Promise<AiResponse> 
             if (outputModeration.flagged) {
                 if (aiResponse.data.choices[0]) {
                     aiResponse.data.choices[0].message.content =
-                        `I'm sorry, I cannot fulfill this request. My safety guidelines prohibit me from generating content of this nature. Please let me know if there's anything else you'd like to discuss!`;
+                        `I'm sorry, I cannot fulfill this request. My safety guidelines prohibit me from generating adult or 18+ content. Please let me know if there's anything else you'd like to discuss!`;
                 }
                 aiResponse.isBlocked = true;
                 aiResponse.blockedReason = outputModeration.reason;
@@ -218,28 +265,58 @@ export const getOpenAiResponse = async (messages: AiMessage[]): Promise<AiRespon
 
     // Check Input Moderation
     for (const msg of messages) {
-        const textToCheck =
-            typeof msg.content === 'string' ? msg.content : msg.content.map((c: AiContent) => c.text).join(' ');
-        const moderation = await checkModeration(textToCheck);
-        if (moderation.flagged) {
-            return {
-                data: {
-                    choices: [
-                        {
-                            message: {
-                                content: "I'm sorry, but I can't fulfill this request. I'm unable to generate content that violates safety policies, including material that is inappropriate or offensive. Is there anything else I can help you with?",
-                                role: 'assistant',
+        if (typeof msg.content === 'string') {
+            const moderation = await checkModeration(msg.content);
+            if (moderation.flagged) {
+                return {
+                    data: {
+                        choices: [
+                            {
+                                message: {
+                                    content: `I'm sorry, but I can't fulfill this request. My safety guidelines prohibit me from generating or discussing adult or 18+ content. Is there anything else I can help you with?`,
+                                    role: 'assistant',
+                                },
+                                index: 0,
+                                finish_reason: 'content_filter',
                             },
-                            index: 0,
-                            finish_reason: 'content_filter',
+                        ],
+                        model: models[0],
+                    },
+                    latencyMs: Date.now() - start,
+                    isBlocked: true,
+                    blockedReason: moderation.reason,
+                } as AiResponse;
+            }
+        } else if (Array.isArray(msg.content)) {
+            for (const content of msg.content) {
+                let moderation: { flagged: boolean; reason?: string } = { flagged: false };
+                if (content.type === 'text' && content.text) {
+                    moderation = await checkModeration(content.text);
+                } else if (content.type === 'image_url' && content.image_url?.url) {
+                    moderation = await checkImageModeration(content.image_url.url);
+                }
+
+                if (moderation.flagged) {
+                    return {
+                        data: {
+                            choices: [
+                            {
+                                message: {
+                                    content: 'I\'m sorry, but I can\'t fulfill this request. My safety guidelines prohibit me from generating or discussing adult or 18+ content. Is there anything else I can help you with?',
+                                    role: 'assistant',
+                                },
+                                index: 0,
+                                finish_reason: 'content_filter',
+                            },
+                            ],
+                            model: models[0],
                         },
-                    ],
-                    model: models[0],
-                },
-                latencyMs: Date.now() - start,
-                isBlocked: true,
-                blockedReason: moderation.reason,
-            } as AiResponse;
+                        latencyMs: Date.now() - start,
+                        isBlocked: true,
+                        blockedReason: moderation.reason,
+                    } as AiResponse;
+                }
+            }
         }
     }
 
@@ -276,7 +353,7 @@ export const getOpenAiResponse = async (messages: AiMessage[]): Promise<AiRespon
             if (outputModeration.flagged) {
                 if (aiResponse.data.choices[0]) {
                     aiResponse.data.choices[0].message.content =
-                        `I'm sorry, I cannot fulfill this request. My safety guidelines prohibit me from generating content of this nature. Please let me know if there's anything else you'd like to discuss!`;
+                        `I'm sorry, I cannot fulfill this request. My safety guidelines prohibit me from generating adult or 18+ content. Please let me know if there's anything else you'd like to discuss!`;
                 }
                 aiResponse.isBlocked = true;
                 aiResponse.blockedReason = outputModeration.reason;

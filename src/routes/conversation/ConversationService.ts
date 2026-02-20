@@ -19,11 +19,6 @@ class ConversationService {
 1. Provide a short, catchy title (max 5 words) for this conversation.
 2. Provide your response to the user's message.
 
-Safety Instruction:
-- You are a helpful and safe AI assistant.
-- Strictly refuse to generate or engage with any content that is sexually explicit, adult-oriented, or inappropriate.
-- If a user asks for such content, politely decline and steer the conversation back to appropriate topics.
-
 Format:
 TITLE: <title>
 CONTENT: <response content>
@@ -177,12 +172,6 @@ User Message: ${firstMessage || (fileUrl ? 'Image' : '')}`;
         }
 
         const context: AiMessage[] = [];
-        context.push({
-            role: ChatRole.SYSTEM,
-            content:
-                'Safety Instruction: You are a helpful and safe AI assistant. Strictly refuse to generate or engage with any content that is sexually explicit, adult-oriented, or inappropriate. If a user asks for such content, politely decline and steer the conversation back to appropriate topics.',
-        });
-
         if (currentSummary) {
             context.push({
                 role: ChatRole.SYSTEM,
@@ -330,12 +319,6 @@ User Message: ${firstMessage || (fileUrl ? 'Image' : '')}`;
         const recentMessages = messagesForContext.slice(-windowSize);
 
         const context: AiMessage[] = [];
-        context.push({
-            role: ChatRole.SYSTEM,
-            content:
-                'Safety Instruction: You are a helpful and safe AI assistant. Strictly refuse to generate or engage with any content that is sexually explicit, adult-oriented, or inappropriate. If a user asks for such content, politely decline and steer the conversation back to appropriate topics.',
-        });
-
         if (conversation.summary) {
             context.push({
                 role: ChatRole.SYSTEM,
